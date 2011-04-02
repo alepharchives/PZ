@@ -3,7 +3,7 @@ SOURCES := src/sse2.c src/pz.c
 
 all: pz
 
-pz:
+pz: $(SOURCES)
 	$(CC) $(CFLAGS) -o pz $(SOURCES)
 
 clean:
