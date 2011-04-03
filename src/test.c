@@ -33,8 +33,9 @@ typedef union {
 void pz_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_transpose_4(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_register_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d);
-void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d);
-void pz_sort_4x4si(v4si *a, v4si *b, v4si *c, v4si *d);
+void pz_bitonic_sort_4si(v4si *a, v4si *b);
+//void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d);
+//void pz_sort_4x4si(v4si *a, v4si *b, v4si *c, v4si *d);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 v4si_u * get_4x_v4si_random(int32_t m) {
@@ -110,6 +111,37 @@ int test_register_sort_4() {
 
 }
 
+// Test full sorting of 4 vectors of 4 32bit signed integers
+int test_bitonic_sort() {
+    v4si_u   *v;
+    int      i, j;
+
+    v = get_4x_v4si_random(15); // Get random 0-3
+
+    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first two together
+
+    // Check
+    for (i = 0; i < 2; i++) {
+        for (j = 0; j < 3; j++) {
+            if (v[i].s[j] > v[i].s[j + 1]) {
+                printf("test_bitonic_sort: error at %d:%d\n", i, j);
+                printf("  % 2d - % 2d\n", v[i].s[j], v[i].s[j + 1]);
+                // Display sorted
+                for (i = 0; i < 2; i++)
+                    printf("% 3d % 3d % 3d % 3d\n",
+                            v[i].s[0], v[i].s[1], v[i].s[2], v[i].s[3]);
+                return (-1);
+            }
+        }
+    }
+
+    _mm_free(v);
+
+    return 0;
+
+}
+
 int main(int argc, char *argv[]) {
     int t = 100; // Repetitions of the tests
     int i;
@@ -125,6 +157,11 @@ int main(int argc, char *argv[]) {
         if (test_register_sort_4())
             return -1;
     printf("test_register_sort_4: %d tests OK\n", i);
+
+    for (i = 0; i < t; i++)
+        if (test_bitonic_sort())
+            return -1;
+    printf("test_bitonic_sort: %d tests OK\n", i);
 
     return 0;
 
