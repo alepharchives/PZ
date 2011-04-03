@@ -211,6 +211,10 @@ void pz_bitonic_sort_4si(v4si *a, v4si *b) {
     bitonic_sort_4si_sse2(a, b);
 }
 
+void pz_bitonic_sort_2x_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
+    bitonic_sort_2x_4si_sse2(a, b, c, d);
+}
+
 void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d) {
     sort_4x_4si_sse2(a, b, c, d);
 }

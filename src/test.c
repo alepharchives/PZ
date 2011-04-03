@@ -111,7 +111,7 @@ int test_register_sort_4() {
 
 }
 
-// Test full sorting of 4 vectors of 4 32bit signed integers
+// Test merge sort of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort() {
     v4si_u   *v;
     int      i, j;
@@ -142,26 +142,58 @@ int test_bitonic_sort() {
 
 }
 
+// Test parallel merge sort of 2 pairs of 2 vectors of 4 32bit signed integers
+int test_bitonic_sort_2x() {
+    v4si_u   *v;
+    int      i, j;
+
+    v = get_4x_v4si_random(15); // Get random 0-3
+
+    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first two together
+    pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second two together
+
+    // Check
+    for (i = 0; i < 2; i++) {
+        for (j = 0; j < 3; j++) {
+            if (v[i].s[j] > v[i].s[j + 1]
+                    || v[i + 2].s[j] > v[i + 2].s[j + 1]) {
+                printf("test_bitonic_sort: error at %d:%d\n", i, j);
+                printf("  % 2d - % 2d\n", v[i].s[j], v[i].s[j + 1]);
+                // Display sorted
+                for (i = 0; i < 4; i++)
+                    printf("% 3d % 3d % 3d % 3d\n",
+                            v[i].s[0], v[i].s[1], v[i].s[2], v[i].s[3]);
+                return (-1);
+            }
+        }
+    }
+
+    _mm_free(v);
+
+    return 0;
+
+}
+
+int run_test(int (*f)(void), char *name, int reps) {
+    int i;
+
+    for (i = 0; i < reps; i++)
+        if (f())
+            return -1;
+    printf("%s: %d tests OK\n", name, i);
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     int t = 100; // Repetitions of the tests
-    int i;
 
     srandomdev(); // Init random pool from random device
 
-    for (i = 0; i < t; i++)
-        if (test_column_sort_4())
-            return -1;
-    printf("test_column_sort_4: %d tests OK\n", i);
-
-    for (i = 0; i < t; i++)
-        if (test_register_sort_4())
-            return -1;
-    printf("test_register_sort_4: %d tests OK\n", i);
-
-    for (i = 0; i < t; i++)
-        if (test_bitonic_sort())
-            return -1;
-    printf("test_bitonic_sort: %d tests OK\n", i);
+    run_test(test_column_sort_4, "test_column_sort_4", t);
+    run_test(test_register_sort_4, "test_register_sort_4", t);
+    run_test(test_bitonic_sort, "test_bitonic_sort", t);
+    run_test(test_bitonic_sort_2x, "test_bitonic_sort_2x", t);
 
     return 0;
 
