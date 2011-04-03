@@ -39,11 +39,11 @@ void pz_merge_4x_4si(v4si *v);
 //void pz_sort_4x4si(v4si *a, v4si *b, v4si *c, v4si *d);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
-v4si_u * get_4x_v4si_random(int32_t m) {
+v4si_u * get_4x_v4si_random(int size, int32_t m) {
     v4si_u  *v;
     int      i, j;
 
-    v = _mm_malloc(sizeof (*v) * 4, 16);
+    v = _mm_malloc(sizeof (*v), size);
     for (i = 0; i < 4; i++)
         for (j = 0; j < 4; j++)
             v[i].s[j] = random() & m; // Smaller number, only testing 4
@@ -57,7 +57,7 @@ int test_column_sort_4() {
     v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(3); // Get random 0-3
+    v = get_4x_v4si_random(4, 3); // Get random 0-3
 
     pz_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
 
@@ -87,7 +87,7 @@ int test_register_sort_4() {
     v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(3); // Get random 0-3
+    v = get_4x_v4si_random(4, 3); // Get random 0-3
 
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
 
@@ -118,7 +118,7 @@ int test_bitonic_sort() {
     v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(15); // Get random 0-3
+    v = get_4x_v4si_random(4, 15); // Get random 0-3
 
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
     pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first two together
@@ -149,7 +149,7 @@ int test_bitonic_sort_2x() {
     v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(15); // Get random 0-15
+    v = get_4x_v4si_random(4, 15); // Get random 0-15
 
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
     pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
@@ -184,7 +184,7 @@ int test_merge_2_pairs() {
     v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(15); // Get random 0-15
+    v = get_4x_v4si_random(4, 15); // Get random 0-15
 
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
     pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
