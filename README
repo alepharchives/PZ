@@ -9,4 +9,4 @@ only the SSE2 instruction set.
 
 [1] J. Chhugani, A. D. Nguyen, V. W. Lee, W. Macy, M. Hagog, Y.-K. Chen,A.
     Baransi, S. Kumar, and P. Dubey. Efficient implementation of sorting
-    onmulti-core simd cpu architecture. PVLDB, 1(2):1313–1324, 2008
+    on multi-core simd cpu architecture. PVLDB, 1(2):1313–1324, 2008
