@@ -148,7 +148,7 @@ int test_bitonic_sort_2x() {
     v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(15); // Get random 0-3
+    v = get_4x_v4si_random(15); // Get random 0-15
 
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
     pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
