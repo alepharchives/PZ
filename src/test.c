@@ -113,6 +113,7 @@ int test_register_sort_4() {
 
 // Test merge sort of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort() {
+    int32_t  a[8], *pa;
     v4si_u   *v;
     int      i, j;
 
@@ -121,20 +122,19 @@ int test_bitonic_sort() {
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
     pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first two together
 
+    // Move to sequential array
+    for (i = 0, pa = a; i < 2; i++)
+        for (j = 0; j < 4; j++)
+            *pa++ = v[i].s[j];
+
     // Check
-    for (i = 0; i < 2; i++) {
-        for (j = 0; j < 3; j++) {
-            if (v[i].s[j] > v[i].s[j + 1]) {
-                printf("test_bitonic_sort: error at %d:%d\n", i, j);
-                printf("  % 2d - % 2d\n", v[i].s[j], v[i].s[j + 1]);
-                // Display sorted
-                for (i = 0; i < 2; i++)
-                    printf("% 3d % 3d % 3d % 3d\n",
-                            v[i].s[0], v[i].s[1], v[i].s[2], v[i].s[3]);
-                return (-1);
-            }
+    for (i = 0; i < 7; i++)
+        if (a[i] > a[i + 1]) {
+            printf("%d %d\n", i, j);
+            printf("test_bitonic_sort: error at position %d: %d > %d\n",
+                    i, a[i], a[i + 1]);
+            break;
         }
-    }
 
     _mm_free(v);
 
@@ -144,30 +144,32 @@ int test_bitonic_sort() {
 
 // Test parallel merge sort of 2 pairs of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort_2x() {
+    int32_t  a[8], b[8], *pa, *pb;
     v4si_u   *v;
     int      i, j;
 
     v = get_4x_v4si_random(15); // Get random 0-3
 
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
-    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first two together
-    pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second two together
+    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
+    pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second pair
+
+    // Move to sequential array
+    for (i = 0, pa = a, pb = b; i < 2; i++)
+        for (j = 0; j < 4; j++) {
+            *pa++ = v[i].s[j];
+            *pb++ = v[i + 2].s[j];
+        }
 
     // Check
-    for (i = 0; i < 2; i++) {
-        for (j = 0; j < 3; j++) {
-            if (v[i].s[j] > v[i].s[j + 1]
-                    || v[i + 2].s[j] > v[i + 2].s[j + 1]) {
-                printf("test_bitonic_sort: error at %d:%d\n", i, j);
-                printf("  % 2d - % 2d\n", v[i].s[j], v[i].s[j + 1]);
-                // Display sorted
-                for (i = 0; i < 4; i++)
-                    printf("% 3d % 3d % 3d % 3d\n",
-                            v[i].s[0], v[i].s[1], v[i].s[2], v[i].s[3]);
-                return (-1);
-            }
+    for (i = 0; i < 7; i++)
+        if (a[i] > a[i + 1] || b[i] > b[i + 1]) {
+            pa = a[i] > a[i + 1] ? pa : pb; // For single printf line
+            printf("%d %d\n", i, j);
+            printf("test_bitonic_sort: error at position %d: %d > %d\n",
+                    i, *pa, pa[1]);
+            break;
         }
-    }
 
     _mm_free(v);
 
