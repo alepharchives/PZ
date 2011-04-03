@@ -188,7 +188,7 @@ int run_test(int (*f)(void), char *name, int reps) {
 }
 
 int main(int argc, char *argv[]) {
-    int t = 100; // Repetitions of the tests
+    int t = 10000; // Repetitions of the tests
 
     srandomdev(); // Init random pool from random device
 
