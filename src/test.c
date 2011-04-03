@@ -34,7 +34,7 @@ void pz_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_transpose_4(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_register_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_bitonic_sort_4si(v4si *a, v4si *b);
-void pz_merge_4x_4si(v4si *v);
+void pz_merge_2l_2x4si(v4si *v);
 //void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d);
 //void pz_sort_4x4si(v4si *a, v4si *b, v4si *c, v4si *d);
 
@@ -189,7 +189,7 @@ int test_merge_2_pairs() {
     pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
     pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
     pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second pair
-    pz_merge_4x_4si((v4si *) v); // Merge 2 adjacent lists of 2 pairs
+    pz_merge_2l_2x4si((v4si *) v); // Merge 2 adjacent lists of 2 pairs
 
     // Move to sequential array
     for (i = 0, pa = a; i < 4; i++)

@@ -146,7 +146,7 @@ static void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
 // Merge 4 adjacent pairs of sorted registers 
 //   since it's only 4 we don't need big aux vector
-static void merge_4x_4si_sse2(v4si *v) {
+static void merge_2l_2x4si_sse2(v4si *v) {
     v4si_u  b, d;
 
     b.v = v[1]; // To compare first elements
@@ -186,8 +186,8 @@ void pz_bitonic_sort_2x_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
     bitonic_sort_2x_4si_sse2(a, b, c, d);
 }
 
-void pz_merge_4x_4si(v4si *v) {
-    merge_4x_4si_sse2(v);
+void pz_merge_2l_2x4si(v4si *v) {
+    merge_2l_2x4si_sse2(v);
 }
 
 // External function for sorting 4x4 signed integers
