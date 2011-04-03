@@ -24,6 +24,11 @@
 typedef __v4si v4si;
 typedef __v4sf v4sf;
 
+typedef union {
+  int32_t s[4];
+  v4si  v;
+} v4si_u;
+
 // SSE2 lacks pmin/pmax for 32bit
 static void minmax_4si_sse2(v4si *a, v4si *b) {
     v4si mask = __builtin_ia32_pcmpgtd128(*a, *b);
@@ -139,6 +144,26 @@ static void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
 }
 
+// Merge 4 adjacent pairs of sorted registers 
+//   since it's only 4 we don't need big aux vector
+static void merge_4x_4si_sse2(v4si *v) {
+    v4si_u  b, d;
+
+    b.v = v[1]; // To compare first elements
+    d.v = v[3];
+
+    bitonic_sort_4si_sse2(&v[0], &v[2]); // Merge heads (a, c)
+
+    if (b.s[0] > d.s[0]) {
+        v[1] = d.v; // Exchange b and d
+        v[3] = b.v;
+    }
+
+    bitonic_sort_4si_sse2(&v[1], &v[2]); // Now v[1] is done
+    bitonic_sort_4si_sse2(&v[2], &v[3]); // Now v[2] and v[3] are done
+
+}
+
 //
 // Bitonic full sort of 4 vectors of 4 32bit signed integers
 //   Sorts 16 elements
@@ -213,6 +238,10 @@ void pz_bitonic_sort_4si(v4si *a, v4si *b) {
 
 void pz_bitonic_sort_2x_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
     bitonic_sort_2x_4si_sse2(a, b, c, d);
+}
+
+void pz_merge_4x_4si(v4si *v) {
+    merge_4x_4si_sse2(v);
 }
 
 void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d) {
