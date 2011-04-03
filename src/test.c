@@ -80,7 +80,7 @@ int test_column_sort_4() {
 
 }
 
-// Test sorting columns of 4 vectors of 4 32bit signed integers
+// Test transposing 4 vectors of 4 32bit signed integers
 int test_register_sort_4() {
     v4si_u   *v;
     int      i, j;
