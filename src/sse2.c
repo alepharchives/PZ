@@ -22,6 +22,7 @@
 
 // A vector of 4 32bit signed integers (SSE2 128bit register)
 typedef __v4si v4si;
+typedef __v4sf v4sf;
 
 // SSE2 lacks pmin/pmax for 32bit
 static void minmax_4si_sse2(v4si *a, v4si *b) {
@@ -39,6 +40,28 @@ static void column_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
     minmax_4si_sse2(a, b);
     minmax_4si_sse2(c, d);
     minmax_4si_sse2(b, c);
+
+}
+
+// Transpose 4 vectors of 4 32bit elements
+static void transpose_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+
+  __v4sf t0 = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
+  __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) *c, (__v4sf) *d);
+  __v4sf t2 = __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
+  __v4sf t3 = __builtin_ia32_unpckhps ((__v4sf) *c, (__v4sf) *d);
+  *a = (v4si) __builtin_ia32_movlhps (t0, t1);
+  *b = (v4si) __builtin_ia32_movhlps (t1, t0);
+  *c = (v4si) __builtin_ia32_movlhps (t2, t3);
+  *d = (v4si) __builtin_ia32_movhlps (t3, t2);
+
+}
+    
+// In-register sort of 4 vectors of 32bit signed integers
+static void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+
+    column_sort_4si_sse2(a, b, c, d); // Sort columns
+    transpose_4si_sse2(a, b, c, d);   // Transpose (a, b, c, d each sorted)
 
 }
 
@@ -169,3 +192,30 @@ static void sort_8x_4si(v4si *a, v4si *b, v4si *c, v4si *d,
 
     // XXX: Should check b < f and so on
 }
+
+#ifdef TEST
+
+void pz_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
+    column_sort_4si_sse2(a, b, c, d);
+}
+
+void pz_transpose_4(v4si *a, v4si *b, v4si *c, v4si *d) {
+    transpose_4si_sse2(a, b, c, d);
+}
+
+void pz_register_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
+    register_sort_4si_sse2(a, b, c, d);
+}
+
+void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d) {
+    sort_4x_4si_sse2(a, b, c, d);
+}
+
+// External function for sorting 4x4 signed integers
+void pz_sort_4x4si(v4si *a, v4si *b, v4si *c, v4si *d) {
+
+    column_sort_4si_sse2(a, b, c, d);
+
+}
+
+#endif
