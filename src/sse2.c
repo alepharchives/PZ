@@ -164,60 +164,6 @@ static void merge_4x_4si_sse2(v4si *v) {
 
 }
 
-//
-// Bitonic full sort of 4 vectors of 4 32bit signed integers
-//   Sorts 16 elements
-static void sort_4x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
-
-    column_sort_4si_sse2(a, b, c, d); // Get partial sort in registers
-
-    bitonic_sort_2x_4si_sse2(a, b, c, d); // Sort (a,b) and (c,d)
-
-    // Merge-exchange both heads (a and c)
-    bitonic_sort_4si_sse2(a, c); // Merge sort (a,c)
-    // a has lowest 4 elements of original 16
-    bitonic_sort_4si_sse2(b, c); // Merge sort (b,c)
-    // b has 2nd lowest 4 elements
-    bitonic_sort_4si_sse2(c, d); // Merge sort (c,d)
-    // c has 3rd lowest 4 elements, d has the higher 4
-
-}
-
-//
-// Bitonic full sort of 8 vectors of 32bit signed integers
-//   Sorts 32 elements
-//   Intercalated sorting of the first 16 and second 16 (paths A, B)
-static void sort_8x_4si(v4si *a, v4si *b, v4si *c, v4si *d,
-        v4si *e, v4si *f, v4si *g, v4si *h) {
-
-    column_sort_4si_sse2(a, b, c, d); // Column sort path A
-    column_sort_4si_sse2(e, f, g, h); // Column sort path B
-
-    bitonic_sort_2x_4si_sse2(a, b, c, d); // Sort path A
-    bitonic_sort_2x_4si_sse2(e, f, g, h); // Sort path B
-
-    bitonic_sort_4si_sse2(a, c); // Exchange heads path A
-    bitonic_sort_4si_sse2(e, g); // Exchange heads path B
-    // a has 4 lowest of original (abcd), e lowest of original (efgh)
-
-    // Merge-exchange b and c
-    bitonic_sort_4si_sse2(b, c); // Sort (b,c)
-    bitonic_sort_4si_sse2(f, g); // Sort (f,g)
-    // b and f have 2nd lowest of each path (A and B respectively)
-
-    bitonic_sort_4si_sse2(c, d); // Merge (c,d)
-    bitonic_sort_4si_sse2(g, h); // Merge (g,h)
-    // c and g have 3rd lowest of each path (A and B respectively)
-
-    // Finally, merge paths A and B
-    bitonic_sort_4si_sse2(a, e); // Merge heads of paths A and B
-    bitonic_sort_4si_sse2(b, f);
-    bitonic_sort_4si_sse2(c, g);
-    bitonic_sort_4si_sse2(d, h);
-
-    // XXX: Should check b < f and so on
-}
-
 #ifdef TEST
 
 void pz_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
@@ -242,10 +188,6 @@ void pz_bitonic_sort_2x_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
 
 void pz_merge_4x_4si(v4si *v) {
     merge_4x_4si_sse2(v);
-}
-
-void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d) {
-    sort_4x_4si_sse2(a, b, c, d);
 }
 
 // External function for sorting 4x4 signed integers
