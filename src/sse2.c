@@ -20,6 +20,12 @@
 #include <stdint.h>
 #include <xmmintrin.h>
 
+#ifndef TEST
+#  define LOCAL static // No external call, inline
+#else
+#  define LOCAL        // Empty, allows external call
+#endif
+
 // A vector of 4 32bit signed integers (SSE2 128bit register)
 typedef __v4si v4si;
 typedef __v4sf v4sf;
@@ -30,7 +36,7 @@ typedef union {
 } v4si_u;
 
 // SSE2 lacks pmin/pmax for 32bit
-static void minmax_4si_sse2(v4si *a, v4si *b) {
+LOCAL void minmax_4si_sse2(v4si *a, v4si *b) {
     v4si mask = __builtin_ia32_pcmpgtd128(*a, *b);
     v4si t = (*a ^ *b) & mask;
     *a ^= t;
@@ -38,7 +44,7 @@ static void minmax_4si_sse2(v4si *a, v4si *b) {
 }
 
 // In-register sort of 4
-static void column_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void column_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
     minmax_4si_sse2(a, c);
     minmax_4si_sse2(b, d);
@@ -49,7 +55,7 @@ static void column_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 }
 
 // Transpose 4 vectors of 4 32bit elements
-static void transpose_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void transpose_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
   __v4sf t0 = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
   __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) *c, (__v4sf) *d);
@@ -63,7 +69,7 @@ static void transpose_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 }
     
 // In-register sort of 4 vectors of 32bit signed integers
-static void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
     column_sort_4si_sse2(a, b, c, d); // Sort columns
     transpose_4si_sse2(a, b, c, d);   // Transpose (a, b, c, d each sorted)
@@ -75,7 +81,7 @@ static void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 //
 
 // Level 1 exchange
-static void bitonic_l1_exchange_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_l1_exchange_4si_sse2(v4si *a, v4si *b) {
 
     __v4sf t0 = __builtin_ia32_movhlps ((__v4sf) *b,(__v4sf)  *a);
     __v4sf t1 = __builtin_ia32_movlhps ((__v4sf) *a,(__v4sf)  *b);
@@ -84,7 +90,7 @@ static void bitonic_l1_exchange_4si_sse2(v4si *a, v4si *b) {
 }
 
 // Level 2 exchange
-static void bitonic_l2_exchange_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_l2_exchange_4si_sse2(v4si *a, v4si *b) {
 
     __v4sf t0 = __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
     __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
@@ -94,7 +100,7 @@ static void bitonic_l2_exchange_4si_sse2(v4si *a, v4si *b) {
 }
 
 // Level 3 exchange
-static void bitonic_l3_exchange_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_l3_exchange_4si_sse2(v4si *a, v4si *b) {
 
     __v4sf t = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
     *b = (v4si) __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
@@ -103,7 +109,7 @@ static void bitonic_l3_exchange_4si_sse2(v4si *a, v4si *b) {
 }
 
 // Bitonic sort for 4 vectors of 4 32bit signed integers
-static void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
 
     *a = __builtin_ia32_pshufd (*a, 0x1B); // Reverse a
 
@@ -119,7 +125,7 @@ static void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
 // Parallel bitonic sort for 2+2 vectors
 //   Same as bitonic(a,b) and bitonic(c,d)
 //   For latency hiding and better reciprocal throughput
-static void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
     *a = __builtin_ia32_pshufd (*a, 0x1B); // Reverse a
     *c = __builtin_ia32_pshufd (*c, 0x1B); // Reverse c
@@ -146,7 +152,7 @@ static void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
 // Merge 4 adjacent pairs of sorted registers 
 //   since it's only 4 we don't need big aux vector
-static void merge_2l_2x4si_sse2(v4si *v) {
+LOCAL void merge_2l_2x4si_sse2(v4si *v) {
     v4si_u  b, d;
 
     b.v = v[1]; // To compare first elements
@@ -169,7 +175,7 @@ static void merge_2l_2x4si_sse2(v4si *v) {
 //   aaaa aaaa bbbb bbbb || cccc cccc dddd dddd    (input)
 //   xxxx xxxx xxxx xxxx || yyyy yyyy yyyy yyyy    (result)
 //
-static void merge_parallel_2x2l_2x4si_sse2(v4si *v) {
+LOCAL void merge_parallel_2x2l_2x4si_sse2(v4si *v) {
     v4si_u  *vu = (v4si_u *) v;
 
     bitonic_sort_4si_sse2(&v[0], &v[2]); // Merge heads (a, b)
@@ -194,35 +200,3 @@ static void merge_parallel_2x2l_2x4si_sse2(v4si *v) {
     bitonic_sort_4si_sse2(&v[6], &v[7]); // Now v[6] and v[7] are done
 
 }
-
-#ifdef TEST
-
-void pz_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
-    column_sort_4si_sse2(a, b, c, d);
-}
-
-void pz_transpose_4(v4si *a, v4si *b, v4si *c, v4si *d) {
-    transpose_4si_sse2(a, b, c, d);
-}
-
-void pz_register_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
-    register_sort_4si_sse2(a, b, c, d);
-}
-
-void pz_bitonic_sort_4si(v4si *a, v4si *b) {
-    bitonic_sort_4si_sse2(a, b);
-}
-
-void pz_bitonic_sort_2x_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
-    bitonic_sort_2x_4si_sse2(a, b, c, d);
-}
-
-void pz_merge_2l_2x4si(v4si *v) {
-    merge_2l_2x4si_sse2(v);
-}
-
-void pz_merge_parallel_2x2l_2x4si(v4si *v) {
-    merge_parallel_2x2l_2x4si_sse2(v);
-}
-
-#endif

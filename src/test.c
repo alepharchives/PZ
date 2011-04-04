@@ -30,13 +30,13 @@ typedef union {
 
 
 // SSE2 test interfaces
-void pz_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d);
-void pz_transpose_4(v4si *a, v4si *b, v4si *c, v4si *d);
-void pz_register_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d);
-void pz_bitonic_sort_4si(v4si *a, v4si *b);
-void pz_merge_2l_2x4si(v4si *v);
-void pz_merge_parallel_2x2l_2x4si(v4si *v);
-void pz_bitonic_sort_2x_4si(v4si *a, v4si *b, v4si *c, v4si *d);
+void column_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
+void transpose_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
+void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
+void bitonic_sort_4si_sse2(v4si *a, v4si *b);
+void merge_2l_2x4si_sse2(v4si *v);
+void merge_parallel_2x2l_2x4si_sse2(v4si *v);
+void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 v4si_u * get_4x_v4si_random(int size, int32_t m) {
@@ -59,7 +59,7 @@ int test_column_sort_4() {
 
     v = get_4x_v4si_random(4, 3); // Get random 0-3
 
-    pz_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
+    column_sort_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
 
     // Check
     for (i = 0; i < 3; i++) {
@@ -89,7 +89,7 @@ int test_register_sort_4() {
 
     v = get_4x_v4si_random(4, 3); // Get random 0-3
 
-    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
+    register_sort_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
 
     // Check
     for (i = 0; i < 4; i++) {
@@ -120,8 +120,8 @@ int test_bitonic_sort() {
 
     v = get_4x_v4si_random(4, 15); // Get random 0-3
 
-    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
-    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first two together
+    register_sort_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first two together
 
     // Move to sequential array
     for (i = 0, pa = a; i < 2; i++)
@@ -151,9 +151,9 @@ int test_bitonic_sort_2x() {
 
     v = get_4x_v4si_random(4, 15); // Get random 0-15
 
-    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
-    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
-    pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second pair
+    register_sort_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first pair
+    bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort second pair
 
     // Move to sequential array
     for (i = 0, pa = a, pb = b; i < 2; i++)
@@ -186,10 +186,10 @@ int test_merge_2_pairs() {
 
     v = get_4x_v4si_random(4, 15); // Get random 0-15
 
-    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
-    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
-    pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second pair
-    pz_merge_2l_2x4si((v4si *) v); // Merge 2 adjacent lists of 2 pairs
+    register_sort_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first pair
+    bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort second pair
+    merge_2l_2x4si_sse2((v4si *) v); // Merge 2 adjacent lists of 2 pairs
 
     // Move to sequential array
     for (i = 0, pa = a; i < 4; i++)
@@ -234,14 +234,14 @@ int test_merge_parallel_2list_2pairs() {
 
     v = get_4x_v4si_random(8, 15); // Get 8 vectors with random 0-15
 
-    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
-    pz_register_sort_4si(&v[4].v, &v[5].v, &v[6].v, &v[7].v); // In register
-    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
-    pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second pair
-    pz_bitonic_sort_2x_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
-    pz_bitonic_sort_2x_4si(&v[4].v, &v[5].v, &v[6].v, &v[7].v);
-    pz_merge_2l_2x4si((v4si *) v); // Merge 2 adjacent lists of 2 pairs
-    pz_merge_parallel_2x2l_2x4si((v4si *) v); // Merge v0-3 v4-7
+    register_sort_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    register_sort_4si_sse2(&v[4].v, &v[5].v, &v[6].v, &v[7].v); // In register
+    bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first pair
+    bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort second pair
+    bitonic_sort_2x_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
+    bitonic_sort_2x_4si_sse2(&v[4].v, &v[5].v, &v[6].v, &v[7].v);
+    merge_2l_2x4si_sse2((v4si *) v); // Merge 2 adjacent lists of 2 pairs
+    merge_parallel_2x2l_2x4si_sse2((v4si *) v); // Merge v0-3 v4-7
 
     // Move to sequential array
     for (i = 0, pa = a; i < 8; i++)
