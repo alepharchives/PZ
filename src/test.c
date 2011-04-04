@@ -35,16 +35,16 @@ void pz_transpose_4(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_register_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_bitonic_sort_4si(v4si *a, v4si *b);
 void pz_merge_2l_2x4si(v4si *v);
-//void pz_sort_4x4si_each(v4si *a, v4si *b, v4si *c, v4si *d);
-//void pz_sort_4x4si(v4si *a, v4si *b, v4si *c, v4si *d);
+void pz_merge_parallel_2x2l_2x4si(v4si *v);
+void pz_bitonic_sort_2x_4si(v4si *a, v4si *b, v4si *c, v4si *d);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 v4si_u * get_4x_v4si_random(int size, int32_t m) {
     v4si_u  *v;
     int      i, j;
 
-    v = _mm_malloc(sizeof (*v), size);
-    for (i = 0; i < 4; i++)
+    v = _mm_malloc(sizeof (*v) * size, 16);
+    for (i = 0; i < size; i++)
         for (j = 0; j < 4; j++)
             v[i].s[j] = random() & m; // Smaller number, only testing 4
 
@@ -222,6 +222,58 @@ int test_merge_2_pairs() {
 
 }
 
+// Test parallel merge sort of 2 list of 2x2
+//    v0   v1   v2   v3      v4   v5   v6   v7
+//   aaaa aaaa bbbb bbbb || cccc cccc dddd dddd    (input)
+//   xxxx xxxx xxxx xxxx || yyyy yyyy yyyy yyyy    (result)
+//
+int test_merge_parallel_2list_2pairs() {
+    int32_t  a[32], *pa;
+    v4si_u   *v;
+    int      i, j;
+
+    v = get_4x_v4si_random(8, 15); // Get 8 vectors with random 0-15
+
+    pz_register_sort_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    pz_register_sort_4si(&v[4].v, &v[5].v, &v[6].v, &v[7].v); // In register
+    pz_bitonic_sort_4si(&v[0].v, &v[1].v); // Sort first pair
+    pz_bitonic_sort_4si(&v[2].v, &v[3].v); // Sort second pair
+    pz_bitonic_sort_2x_4si(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
+    pz_bitonic_sort_2x_4si(&v[4].v, &v[5].v, &v[6].v, &v[7].v);
+    pz_merge_2l_2x4si((v4si *) v); // Merge 2 adjacent lists of 2 pairs
+    pz_merge_parallel_2x2l_2x4si((v4si *) v); // Merge v0-3 v4-7
+
+    // Move to sequential array
+    for (i = 0, pa = a; i < 8; i++)
+        for (j = 0; j < 4; j++)
+            *pa++ = v[i].s[j];
+
+    // Check
+    for (i = 0; i < 31; i++)
+        if (a[i] > a[i + 1] && i != 15) {
+            printf("test_merge_parallel_2list_2pairs: error at position %d:"
+                    " %d > %d\n", i, a[i], a[i + 1]);
+            break;
+        }
+
+    if (i != 31) {
+
+        for (i = 0; i < 8; i++)
+            for (j = 0; j < 4; j++)
+                printf("% 3d ", v[i].s[j]);
+        printf("-\n");
+
+        _mm_free(v);
+        return -1;
+
+    }
+
+    _mm_free(v);
+
+    return 0;
+
+}
+
 int run_test(int (*f)(void), char *name, int reps) {
     int i;
 
@@ -242,6 +294,8 @@ int main(int argc, char *argv[]) {
     run_test(test_bitonic_sort, "test_bitonic_sort", t);
     run_test(test_bitonic_sort_2x, "test_bitonic_sort_2x", t);
     run_test(test_merge_2_pairs, "test_merge_2_pairs", t);
+    run_test(test_merge_parallel_2list_2pairs,
+            "test_merge_parallel_2list_2pairs", t);
 
     return 0;
 

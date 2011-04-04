@@ -164,6 +164,37 @@ static void merge_2l_2x4si_sse2(v4si *v) {
 
 }
 
+// Simultaneous merge of 2 pairs of lists of 2x4si each
+//    v0   v1   v2   v3      v4   v5   v6   v7
+//   aaaa aaaa bbbb bbbb || cccc cccc dddd dddd    (input)
+//   xxxx xxxx xxxx xxxx || yyyy yyyy yyyy yyyy    (result)
+//
+static void merge_parallel_2x2l_2x4si_sse2(v4si *v) {
+    v4si_u  *vu = (v4si_u *) v;
+
+    bitonic_sort_4si_sse2(&v[0], &v[2]); // Merge heads (a, b)
+    bitonic_sort_4si_sse2(&v[4], &v[6]); // Merge heads (c, d)
+
+    if (vu[1].s[0] > vu[3].s[0]) { // if 2nd a > 2nd b: swap
+        v4si aux = v[1]; // move 2nd a to aux
+        v[1] = v[3];     // move 2nd b to [1] (where 2nd a was)
+        v[3] = aux;      // move aux (2nd a) to [3] (where 2nd b was)
+    }
+
+    if (vu[5].s[0] > vu[7].s[0]) { // if 2nd a > 2nd b: swap
+        v4si aux = v[5]; // move 2nd c to aux
+        v[5] = v[7];     // move 2nd d to [1] (where 2nd c was)
+        v[7] = aux;      // move aux (2nd a) to [3] (where 2nd d was)
+    }
+
+    bitonic_sort_4si_sse2(&v[1], &v[2]); // Now v[1] is done
+    bitonic_sort_4si_sse2(&v[2], &v[3]); // Now v[2] and v[3] are done
+
+    bitonic_sort_4si_sse2(&v[5], &v[6]); // Now v[5] is done
+    bitonic_sort_4si_sse2(&v[6], &v[7]); // Now v[6] and v[7] are done
+
+}
+
 #ifdef TEST
 
 void pz_sort_4si(v4si *a, v4si *b, v4si *c, v4si *d) {
@@ -190,11 +221,8 @@ void pz_merge_2l_2x4si(v4si *v) {
     merge_2l_2x4si_sse2(v);
 }
 
-// External function for sorting 4x4 signed integers
-void pz_sort_4x4si(v4si *a, v4si *b, v4si *c, v4si *d) {
-
-    column_sort_4si_sse2(a, b, c, d);
-
+void pz_merge_parallel_2x2l_2x4si(v4si *v) {
+    merge_parallel_2x2l_2x4si_sse2(v);
 }
 
 #endif
