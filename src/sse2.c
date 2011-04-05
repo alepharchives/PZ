@@ -35,6 +35,16 @@ typedef union {
   v4si  v;
 } v4si_u;
 
+static void swap_sse2(v4si *a, v4si *b) {
+    v4si aux = *a;
+    *a = *b;
+    *b = aux;
+}
+
+static void reverse_v4_sse2(v4si *v) {
+    *v = __builtin_ia32_pshufd (*v, 0x1B); // abcd -> dcab
+}
+
 // SSE2 lacks pmin/pmax for 32bit
 LOCAL void minmax_4si_sse2(v4si *a, v4si *b) {
     v4si mask = __builtin_ia32_pcmpgtd128(*a, *b);
@@ -108,10 +118,8 @@ LOCAL void bitonic_l3_exchange_4si_sse2(v4si *a, v4si *b) {
 
 }
 
-// Bitonic sort for 4 vectors of 4 32bit signed integers
-LOCAL void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
-
-    *a = __builtin_ia32_pshufd (*a, 0x1B); // Reverse a
+// Bitonic merge 4x4si (2 vectors (registers) of 4 32bit signed integers each)
+LOCAL void bitonic_merge_4x4si_sse2(v4si *a, v4si *b) {
 
     minmax_4si_sse2(a, b);
     bitonic_l1_exchange_4si_sse2(a, b);
@@ -122,13 +130,23 @@ LOCAL void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
 
 }
 
+// Bitonic sort for 2 vectors (registers) of 4 32bit signed integers (each)
+LOCAL void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
+
+    reverse_v4_sse2(a);
+    bitonic_merge_4x4si_sse2(a, b);
+
+}
+
 // Parallel bitonic sort for 2+2 vectors
 //   Same as bitonic(a,b) and bitonic(c,d)
 //   For latency hiding and better reciprocal throughput
+//   aaaa bbbb || cccc dddd
+//   xxxx xxxx    yyyy yyyy
 LOCAL void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
-    *a = __builtin_ia32_pshufd (*a, 0x1B); // Reverse a
-    *c = __builtin_ia32_pshufd (*c, 0x1B); // Reverse c
+    reverse_v4_sse2(a);
+    reverse_v4_sse2(c);
 
     minmax_4si_sse2(a, b);
     minmax_4si_sse2(c, d);
@@ -150,23 +168,21 @@ LOCAL void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 
 }
 
-// Merge 4 adjacent pairs of sorted registers 
-//   since it's only 4 we don't need big aux vector
+// Merge 2 lists of 2 vectors
+//   aaaa aaaa || bbbb bbbb
+//   0123 4567    89AB CDEF
+//
 LOCAL void merge_2l_2x4si_sse2(v4si *v) {
-    v4si_u  b, d;
 
-    b.v = v[1]; // To compare first elements
-    d.v = v[3];
+    reverse_v4_sse2(&v[2]);
+    reverse_v4_sse2(&v[3]);
+    swap_sse2(&v[2], &v[3]);
 
-    bitonic_sort_4si_sse2(&v[0], &v[2]); // Merge heads (a, c)
+    minmax_4si_sse2(&v[0], &v[2]); // L1
+    minmax_4si_sse2(&v[1], &v[3]); // L1
 
-    if (b.s[0] > d.s[0]) {
-        v[1] = d.v; // Exchange b and d
-        v[3] = b.v;
-    }
-
-    bitonic_sort_4si_sse2(&v[1], &v[2]); // Now v[1] is done
-    bitonic_sort_4si_sse2(&v[2], &v[3]); // Now v[2] and v[3] are done
+    bitonic_merge_4x4si_sse2(&v[0], &v[1]);
+    bitonic_merge_4x4si_sse2(&v[2], &v[3]);
 
 }
 
