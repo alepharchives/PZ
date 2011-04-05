@@ -36,7 +36,7 @@ void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
 void bitonic_sort_4si_sse2(v4si *a, v4si *b);
 void merge_2l_2x4si_sse2(v4si *v);
 void merge_parallel_2x2l_2x4si_sse2(v4si *v);
-void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
+void bitonic_sort_2x_4si_sse2(v4si *a);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 v4si_u * get_4x_v4si_random(int size, int32_t m) {
@@ -238,8 +238,8 @@ int test_merge_parallel_2list_2pairs() {
     register_sort_4si_sse2(&v[4].v, &v[5].v, &v[6].v, &v[7].v); // In register
     bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first pair
     bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort second pair
-    bitonic_sort_2x_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
-    bitonic_sort_2x_4si_sse2(&v[4].v, &v[5].v, &v[6].v, &v[7].v);
+    bitonic_sort_2x_4si_sse2(&v[0].v);
+    bitonic_sort_2x_4si_sse2(&v[4].v);
     merge_2l_2x4si_sse2((v4si *) v); // Merge 2 adjacent lists of 2 pairs
     merge_parallel_2x2l_2x4si_sse2((v4si *) v); // Merge v0-3 v4-7
 

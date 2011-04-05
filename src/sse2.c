@@ -139,32 +139,32 @@ LOCAL void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
 }
 
 // Parallel bitonic sort for 2+2 vectors
-//   Same as bitonic(a,b) and bitonic(c,d)
+//   Same as bitonic(&v[0],&v[1]) and bitonic(&v[2],&v[3])
 //   For latency hiding and better reciprocal throughput
 //   aaaa bbbb || cccc dddd
 //   xxxx xxxx    yyyy yyyy
-LOCAL void bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void bitonic_sort_2x_4si_sse2(v4si *v) {
 
-    reverse_v4_sse2(a);
-    reverse_v4_sse2(c);
+    reverse_v4_sse2(&v[0]);
+    reverse_v4_sse2(&v[2]);
 
-    minmax_4si_sse2(a, b);
-    minmax_4si_sse2(c, d);
+    minmax_4si_sse2(&v[0], &v[1]);
+    minmax_4si_sse2(&v[2], &v[3]);
 
-    bitonic_l1_exchange_4si_sse2(a, b);
-    bitonic_l1_exchange_4si_sse2(c, d);
+    bitonic_l1_exchange_4si_sse2(&v[0], &v[1]);
+    bitonic_l1_exchange_4si_sse2(&v[2], &v[3]);
 
-    minmax_4si_sse2(a,b);
-    minmax_4si_sse2(c,d);
+    minmax_4si_sse2(&v[0],&v[1]);
+    minmax_4si_sse2(&v[2],&v[3]);
 
-    bitonic_l2_exchange_4si_sse2(a, b);
-    bitonic_l2_exchange_4si_sse2(c, d);
+    bitonic_l2_exchange_4si_sse2(&v[0], &v[1]);
+    bitonic_l2_exchange_4si_sse2(&v[2], &v[3]);
 
-    minmax_4si_sse2(a,b);
-    minmax_4si_sse2(c,d);
+    minmax_4si_sse2(&v[0],&v[1]);
+    minmax_4si_sse2(&v[2],&v[3]);
 
-    bitonic_l3_exchange_4si_sse2(a,b);
-    bitonic_l3_exchange_4si_sse2(c,d);
+    bitonic_l3_exchange_4si_sse2(&v[0],&v[1]);
+    bitonic_l3_exchange_4si_sse2(&v[2],&v[3]);
 
 }
 
