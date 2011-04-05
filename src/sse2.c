@@ -192,27 +192,24 @@ LOCAL void merge_2l_2x4si_sse2(v4si *v) {
 //   xxxx xxxx xxxx xxxx || yyyy yyyy yyyy yyyy    (result)
 //
 LOCAL void merge_parallel_2x2l_2x4si_sse2(v4si *v) {
-    v4si_u  *vu = (v4si_u *) v;
 
-    bitonic_sort_4si_sse2(&v[0], &v[2]); // Merge heads (a, b)
-    bitonic_sort_4si_sse2(&v[4], &v[6]); // Merge heads (c, d)
+    // Prepare by reversing 2nd pairs
+    reverse_v4_sse2(&v[2]); // A
+    reverse_v4_sse2(&v[3]); // A
+    reverse_v4_sse2(&v[6]); // B
+    reverse_v4_sse2(&v[7]); // B
+    swap_sse2(&v[2], &v[3]); // A
+    swap_sse2(&v[6], &v[7]); // B
 
-    if (vu[1].s[0] > vu[3].s[0]) { // if 2nd a > 2nd b: swap
-        v4si aux = v[1]; // move 2nd a to aux
-        v[1] = v[3];     // move 2nd b to [1] (where 2nd a was)
-        v[3] = aux;      // move aux (2nd a) to [3] (where 2nd b was)
-    }
+    minmax_4si_sse2(&v[0], &v[2]); // L1  A
+    minmax_4si_sse2(&v[4], &v[6]); // L1  B
+    minmax_4si_sse2(&v[1], &v[3]); // L1  A
+    minmax_4si_sse2(&v[5], &v[7]); // L1  B
 
-    if (vu[5].s[0] > vu[7].s[0]) { // if 2nd a > 2nd b: swap
-        v4si aux = v[5]; // move 2nd c to aux
-        v[5] = v[7];     // move 2nd d to [1] (where 2nd c was)
-        v[7] = aux;      // move aux (2nd a) to [3] (where 2nd d was)
-    }
+    bitonic_merge_4x4si_sse2(&v[0], &v[1]); // Bitonic 4x4si A1
+    bitonic_merge_4x4si_sse2(&v[4], &v[5]); // Bitonic 4x4si B1
 
-    bitonic_sort_4si_sse2(&v[1], &v[2]); // Now v[1] is done
-    bitonic_sort_4si_sse2(&v[2], &v[3]); // Now v[2] and v[3] are done
-
-    bitonic_sort_4si_sse2(&v[5], &v[6]); // Now v[5] is done
-    bitonic_sort_4si_sse2(&v[6], &v[7]); // Now v[6] and v[7] are done
+    bitonic_merge_4x4si_sse2(&v[2], &v[3]); // Bitonic 4x4si A2
+    bitonic_merge_4x4si_sse2(&v[6], &v[7]); // Bitonic 4x4si B2
 
 }
