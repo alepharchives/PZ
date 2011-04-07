@@ -35,8 +35,9 @@ void transpose_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
 void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
 void bitonic_sort_4si_sse2(v4si *a, v4si *b);
 void merge_2l_2x4si_sse2(v4si *v);
-void merge_parallel_2x2l_2x4si_sse2(v4si *v);
+void merge_parallel_2x2l_2x8si_sse2(v4si *v);
 void bitonic_sort_2x_4si_sse2(v4si *a);
+void bitonic_merge_2x16si_sse2(v4si *v);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 v4si_u * get_4x_v4si_random(int size, int32_t m) {
@@ -241,7 +242,7 @@ int test_merge_parallel_2list_2pairs() {
     bitonic_sort_2x_4si_sse2(&v[0].v);
     bitonic_sort_2x_4si_sse2(&v[4].v);
     merge_2l_2x4si_sse2((v4si *) v); // Merge 2 adjacent lists of 2 pairs
-    merge_parallel_2x2l_2x4si_sse2((v4si *) v); // Merge v0-3 v4-7
+    merge_parallel_2x2l_2x8si_sse2((v4si *) v); // Merge v0-3 v4-7
 
     // Move to sequential array
     for (i = 0, pa = a; i < 8; i++)
@@ -262,6 +263,56 @@ int test_merge_parallel_2list_2pairs() {
             for (j = 0; j < 4; j++)
                 printf("% 3d ", v[i].s[j]);
         printf("-\n");
+
+        _mm_free(v);
+        return -1;
+
+    }
+
+    _mm_free(v);
+
+    return 0;
+
+}
+
+// Test merge of 2 lists of 16 32bit signed integers (16x16si network)
+int test_merge_16x16() {
+    int32_t  a[32], *pa;
+    v4si_u   *v;
+    int      i, j;
+
+    v = get_4x_v4si_random(8, 31); // Get random 0-31
+
+    register_sort_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v); // In register
+    register_sort_4si_sse2(&v[4].v, &v[5].v, &v[6].v, &v[7].v); // In register
+    bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first pair
+    bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort second pair
+    bitonic_sort_4si_sse2(&v[4].v, &v[5].v); // Sort third pair
+    bitonic_sort_4si_sse2(&v[6].v, &v[7].v); // Sort fourth pair
+    merge_2l_2x4si_sse2((v4si *) &v[0]); // Merge 2 adjacent lists of 2 pairs
+    merge_2l_2x4si_sse2((v4si *) &v[4]); // Merge 2 adjacent lists of 2 pairs
+
+    bitonic_merge_2x16si_sse2(&v[0].v); // Test
+
+    // Move to sequential array
+    for (i = 0, pa = a; i < 8; i++)
+        for (j = 0; j < 4; j++)
+            *pa++ = v[i].s[j];
+
+    // Check
+    for (i = 0; i < 31; i++)
+        if (a[i] > a[i + 1]) {
+            printf("test_merge_2_pairs: error at position %d: %d > %d\n",
+                    i, a[i], a[i + 1]);
+            break;
+        }
+
+    if (i != 31) {
+
+        for (i = 0; i < 8; i++)
+            for (j = 0; j < 4; j++)
+                printf("% 3d ", v[i].s[j]);
+        printf("\n");
 
         _mm_free(v);
         return -1;
@@ -296,6 +347,7 @@ int main(int argc, char *argv[]) {
     run_test(test_merge_2_pairs, "test_merge_2_pairs", t);
     run_test(test_merge_parallel_2list_2pairs,
             "test_merge_parallel_2list_2pairs", t);
+    run_test(test_merge_16x16, "test_merge_16x16", t);
 
     return 0;
 

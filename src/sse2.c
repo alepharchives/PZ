@@ -186,20 +186,7 @@ LOCAL void merge_2l_2x4si_sse2(v4si *v) {
 
 }
 
-// Simultaneous merge of 2 pairs of lists of 2x4si each
-//    v0   v1   v2   v3      v4   v5   v6   v7
-//   aaaa aaaa bbbb bbbb || cccc cccc dddd dddd    (input)
-//   xxxx xxxx xxxx xxxx || yyyy yyyy yyyy yyyy    (result)
-//
-LOCAL void merge_parallel_2x2l_2x4si_sse2(v4si *v) {
-
-    // Prepare by reversing 2nd pairs
-    reverse_v4_sse2(&v[2]); // A
-    reverse_v4_sse2(&v[3]); // A
-    reverse_v4_sse2(&v[6]); // B
-    reverse_v4_sse2(&v[7]); // B
-    swap_sse2(&v[2], &v[3]); // A
-    swap_sse2(&v[6], &v[7]); // B
+LOCAL void bitonic_merge_8x8si_sse2(v4si *v) {
 
     minmax_4si_sse2(&v[0], &v[2]); // L1  A
     minmax_4si_sse2(&v[4], &v[6]); // L1  B
@@ -211,5 +198,51 @@ LOCAL void merge_parallel_2x2l_2x4si_sse2(v4si *v) {
 
     bitonic_merge_4x4si_sse2(&v[2], &v[3]); // Bitonic 4x4si A2
     bitonic_merge_4x4si_sse2(&v[6], &v[7]); // Bitonic 4x4si B2
+
+}
+
+
+// Simultaneous merge of 2 pairs of lists of 2x4si each
+//    v0   v1   v2   v3      v4   v5   v6   v7
+//   aaaa aaaa bbbb bbbb || cccc cccc dddd dddd    (input)
+//   xxxx xxxx xxxx xxxx || yyyy yyyy yyyy yyyy    (result)
+//
+LOCAL void merge_parallel_2x2l_2x8si_sse2(v4si *v) {
+
+    // Prepare by reversing 2nd pairs
+    reverse_v4_sse2(&v[2]); // A
+    reverse_v4_sse2(&v[3]); // A
+    reverse_v4_sse2(&v[6]); // B
+    reverse_v4_sse2(&v[7]); // B
+    swap_sse2(&v[2], &v[3]); // A
+    swap_sse2(&v[6], &v[7]); // B
+
+    bitonic_merge_8x8si_sse2(v); // 8x8si network
+
+}
+
+// Bitonic merge 2 lists of 4 vectors (16x16si network)
+//    v0   v1   v2   v3      v4   v5   v6   v7
+//   aaaa aaaa aaaa aaaa || bbbb bbbb bbbb bbbb
+//   0123 4567 89AB CDEF    0123 4567 89AB CDEF
+//
+LOCAL void bitonic_merge_2x16si_sse2(v4si *v) {
+
+    // Prepare for L1 reversing v4-7
+    reverse_v4_sse2(&v[4]);
+    reverse_v4_sse2(&v[5]);
+    reverse_v4_sse2(&v[6]);
+    reverse_v4_sse2(&v[7]);
+    swap_sse2(&v[4], &v[7]);
+    swap_sse2(&v[5], &v[6]);
+
+    // L1 compare
+    minmax_4si_sse2(&v[0], &v[4]);
+    minmax_4si_sse2(&v[1], &v[5]);
+    minmax_4si_sse2(&v[2], &v[6]);
+    minmax_4si_sse2(&v[3], &v[7]);
+
+    bitonic_merge_8x8si_sse2(&v[0]);
+    bitonic_merge_8x8si_sse2(&v[4]);
 
 }
