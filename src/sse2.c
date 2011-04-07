@@ -54,35 +54,35 @@ LOCAL void minmax_4si_sse2(v4si *a, v4si *b) {
 }
 
 // In-register sort of 4
-LOCAL void column_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void column_sort_4si_sse2(v4si *v) {
 
-    minmax_4si_sse2(a, c);
-    minmax_4si_sse2(b, d);
-    minmax_4si_sse2(a, b);
-    minmax_4si_sse2(c, d);
-    minmax_4si_sse2(b, c);
+    minmax_4si_sse2(&v[0], &v[2]);
+    minmax_4si_sse2(&v[1], &v[3]);
+    minmax_4si_sse2(&v[0], &v[1]);
+    minmax_4si_sse2(&v[2], &v[3]);
+    minmax_4si_sse2(&v[1], &v[2]);
 
 }
 
 // Transpose 4 vectors of 4 32bit elements
-LOCAL void transpose_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void transpose_4si_sse2(v4si *v) {
 
-  __v4sf t0 = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
-  __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) *c, (__v4sf) *d);
-  __v4sf t2 = __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
-  __v4sf t3 = __builtin_ia32_unpckhps ((__v4sf) *c, (__v4sf) *d);
-  *a = (v4si) __builtin_ia32_movlhps (t0, t1);
-  *b = (v4si) __builtin_ia32_movhlps (t1, t0);
-  *c = (v4si) __builtin_ia32_movlhps (t2, t3);
-  *d = (v4si) __builtin_ia32_movhlps (t3, t2);
+  __v4sf t0 = __builtin_ia32_unpcklps ((__v4sf) v[0], (__v4sf) v[1]);
+  __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) v[2], (__v4sf) v[3]);
+  __v4sf t2 = __builtin_ia32_unpckhps ((__v4sf) v[0], (__v4sf) v[1]);
+  __v4sf t3 = __builtin_ia32_unpckhps ((__v4sf) v[2], (__v4sf) v[3]);
+  v[0] = (v4si) __builtin_ia32_movlhps (t0, t1);
+  v[1] = (v4si) __builtin_ia32_movhlps (t1, t0);
+  v[2] = (v4si) __builtin_ia32_movlhps (t2, t3);
+  v[3] = (v4si) __builtin_ia32_movhlps (t3, t2);
 
 }
     
 // In-register sort of 4 vectors of 32bit signed integers
-LOCAL void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
+LOCAL void register_sort_4si_sse2(v4si *v) {
 
-    column_sort_4si_sse2(a, b, c, d); // Sort columns
-    transpose_4si_sse2(a, b, c, d);   // Transpose (a, b, c, d each sorted)
+    column_sort_4si_sse2(v); // Sort columns
+    transpose_4si_sse2(v);   // Transpose (a, b, c, d each sorted)
 
 }
 
@@ -91,50 +91,50 @@ LOCAL void register_sort_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 //
 
 // Level 1 exchange
-LOCAL void bitonic_l1_exchange_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_l1_exchange_4si_sse2(v4si *v) {
 
-    __v4sf t0 = __builtin_ia32_movhlps ((__v4sf) *b,(__v4sf)  *a);
-    __v4sf t1 = __builtin_ia32_movlhps ((__v4sf) *a,(__v4sf)  *b);
-    *b = (v4si) t0;
-    *a = (v4si) t1;
+    __v4sf t0 = __builtin_ia32_movhlps ((__v4sf) v[1],(__v4sf)  v[0]);
+    __v4sf t1 = __builtin_ia32_movlhps ((__v4sf) v[0],(__v4sf)  v[1]);
+    v[1] = (v4si) t0;
+    v[0] = (v4si) t1;
 }
 
 // Level 2 exchange
-LOCAL void bitonic_l2_exchange_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_l2_exchange_4si_sse2(v4si *v) {
 
-    __v4sf t0 = __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
-    __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
-    *a = (v4si) __builtin_ia32_movlhps (t1, t0);
-    *b = (v4si) __builtin_ia32_movhlps (t0, t1);
+    __v4sf t0 = __builtin_ia32_unpckhps ((__v4sf) v[0], (__v4sf) v[1]);
+    __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) v[0], (__v4sf) v[1]);
+    v[0] = (v4si) __builtin_ia32_movlhps (t1, t0);
+    v[1] = (v4si) __builtin_ia32_movhlps (t0, t1);
 
 }
 
 // Level 3 exchange
-LOCAL void bitonic_l3_exchange_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_l3_exchange_4si_sse2(v4si *v) {
 
-    __v4sf t = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
-    *b = (v4si) __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
-    *a = (v4si) t;
+    __v4sf t = __builtin_ia32_unpcklps ((__v4sf) v[0], (__v4sf) v[1]);
+    v[1] = (v4si) __builtin_ia32_unpckhps ((__v4sf) v[0], (__v4sf) v[1]);
+    v[0] = (v4si) t;
 
 }
 
 // Bitonic merge 4x4si (2 vectors (registers) of 4 32bit signed integers each)
-LOCAL void bitonic_merge_4x4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_merge_4x4si_sse2(v4si *v) {
 
-    minmax_4si_sse2(a, b);
-    bitonic_l1_exchange_4si_sse2(a, b);
-    minmax_4si_sse2(a,b);
-    bitonic_l2_exchange_4si_sse2(a, b);
-    minmax_4si_sse2(a,b);
-    bitonic_l3_exchange_4si_sse2(a,b);
+    minmax_4si_sse2(&v[0], &v[1]);
+    bitonic_l1_exchange_4si_sse2(v);
+    minmax_4si_sse2(&v[0], &v[1]);
+    bitonic_l2_exchange_4si_sse2(v);
+    minmax_4si_sse2(&v[0], &v[1]);
+    bitonic_l3_exchange_4si_sse2(v);
 
 }
 
 // Bitonic sort for 2 vectors (registers) of 4 32bit signed integers (each)
-LOCAL void bitonic_sort_4si_sse2(v4si *a, v4si *b) {
+LOCAL void bitonic_sort_4si_sse2(v4si *v) {
 
-    reverse_v4_sse2(a);
-    bitonic_merge_4x4si_sse2(a, b);
+    reverse_v4_sse2(v);
+    bitonic_merge_4x4si_sse2(v);
 
 }
 
@@ -151,20 +151,20 @@ LOCAL void bitonic_sort_2x_4si_sse2(v4si *v) {
     minmax_4si_sse2(&v[0], &v[1]);
     minmax_4si_sse2(&v[2], &v[3]);
 
-    bitonic_l1_exchange_4si_sse2(&v[0], &v[1]);
-    bitonic_l1_exchange_4si_sse2(&v[2], &v[3]);
+    bitonic_l1_exchange_4si_sse2(&v[0]); // 0-1
+    bitonic_l1_exchange_4si_sse2(&v[2]); // 2-3
 
     minmax_4si_sse2(&v[0],&v[1]);
     minmax_4si_sse2(&v[2],&v[3]);
 
-    bitonic_l2_exchange_4si_sse2(&v[0], &v[1]);
-    bitonic_l2_exchange_4si_sse2(&v[2], &v[3]);
+    bitonic_l2_exchange_4si_sse2(&v[0]); // 0-1
+    bitonic_l2_exchange_4si_sse2(&v[2]); // 2-3
 
     minmax_4si_sse2(&v[0],&v[1]);
     minmax_4si_sse2(&v[2],&v[3]);
 
-    bitonic_l3_exchange_4si_sse2(&v[0],&v[1]);
-    bitonic_l3_exchange_4si_sse2(&v[2],&v[3]);
+    bitonic_l3_exchange_4si_sse2(&v[0]); // 0-1
+    bitonic_l3_exchange_4si_sse2(&v[2]); // 2-3
 
 }
 
@@ -181,8 +181,8 @@ LOCAL void merge_2l_2x4si_sse2(v4si *v) {
     minmax_4si_sse2(&v[0], &v[2]); // L1
     minmax_4si_sse2(&v[1], &v[3]); // L1
 
-    bitonic_merge_4x4si_sse2(&v[0], &v[1]);
-    bitonic_merge_4x4si_sse2(&v[2], &v[3]);
+    bitonic_merge_4x4si_sse2(&v[0]); // 0-1
+    bitonic_merge_4x4si_sse2(&v[2]); // 2-3
 
 }
 
@@ -193,11 +193,11 @@ LOCAL void bitonic_merge_8x8si_sse2(v4si *v) {
     minmax_4si_sse2(&v[1], &v[3]); // L1  A
     minmax_4si_sse2(&v[5], &v[7]); // L1  B
 
-    bitonic_merge_4x4si_sse2(&v[0], &v[1]); // Bitonic 4x4si A1
-    bitonic_merge_4x4si_sse2(&v[4], &v[5]); // Bitonic 4x4si B1
+    bitonic_merge_4x4si_sse2(&v[0]); // Bitonic 4x4si A1  0-1
+    bitonic_merge_4x4si_sse2(&v[4]); // Bitonic 4x4si B1  4-5
 
-    bitonic_merge_4x4si_sse2(&v[2], &v[3]); // Bitonic 4x4si A2
-    bitonic_merge_4x4si_sse2(&v[6], &v[7]); // Bitonic 4x4si B2
+    bitonic_merge_4x4si_sse2(&v[2]); // Bitonic 4x4si A2  2-3
+    bitonic_merge_4x4si_sse2(&v[6]); // Bitonic 4x4si B2  6-7
 
 }
 
