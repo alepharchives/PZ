@@ -38,6 +38,7 @@ void pz_merge_2l_2x4si_sse2(v4si *v);
 void pz_merge_parallel_2x2l_2x8si_sse2(v4si *v);
 void pz_bitonic_sort_2x_4si_sse2(v4si *v);
 void pz_bitonic_merge_2x16si_sse2(v4si *v);
+void pz_register_sort_4x4si_full_sse2(v4si *v);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 v4si_u * get_4x_v4si_random(int size, int32_t m) {
@@ -104,6 +105,30 @@ int test_register_sort_4() {
                             v[i].s[0], v[i].s[1], v[i].s[2], v[i].s[3]);
                 return (-1);
             }
+        }
+    }
+
+    _mm_free(v);
+
+    return 0;
+
+}
+
+// Test sorting 16 signed integers
+int test_register_sort_full_16si() {
+    v4si_u   *v;
+    int32_t  *vi;
+    int      i;
+
+    v = get_4x_v4si_random(4, 15); // Get random 0-15
+
+    pz_register_sort_4x4si_full_sse2(&v[0].v); // Sort 0-3 full
+
+    // Check
+    for (i = 1, vi = (int32_t *) v; i < 15; i++) {
+        if (vi[i] > vi[i + 1]) {
+            printf("test_register_sort_full_16si: error at %d\n", i);
+            printf("  % 2d - % 2d\n", vi[i], vi[i + 1]);
         }
     }
 
@@ -342,6 +367,7 @@ int main(int argc, char *argv[]) {
 
     run_test(test_column_sort_4, "test_column_sort_4", t);
     run_test(test_register_sort_4, "test_register_sort_4", t);
+    run_test(test_register_sort_full_16si, "test_register_sort_full_16si", t);
     run_test(test_bitonic_sort, "test_bitonic_sort", t);
     run_test(test_bitonic_sort_2x, "test_bitonic_sort_2x", t);
     run_test(test_merge_2_pairs, "test_merge_2_pairs", t);
