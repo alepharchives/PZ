@@ -218,7 +218,7 @@ static inline void merge_parallel_2x2l_2x8si_sse2(v4si *v) {
 // Bitonic merge 2 lists of 4 vectors (16x16si network)
 //    v0   v1   v2   v3      v4   v5   v6   v7
 //   aaaa aaaa aaaa aaaa || bbbb bbbb bbbb bbbb
-//   0123 4567 89AB CDEF    0123 4567 89AB CDEF
+//   xxxx xxxx xxxx xxxx    xxxx xxxx xxxx xxxx
 //
 static inline void bitonic_merge_2x16si_sse2(v4si *v) {
 
