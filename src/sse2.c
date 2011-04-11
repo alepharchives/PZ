@@ -241,6 +241,18 @@ static inline void bitonic_merge_2x16si_sse2(v4si *v) {
 
 }
 
+// Sort 4 vectors of 4si
+//    result is 16 sorted signed integers
+static inline void register_sort_4x4si_full_sse2(v4si *v) {
+
+    column_sort_4si_sse2(v); // Sort columns
+    transpose_4si_sse2(v);   // Transpose (a, b, c, d each sorted)
+    bitonic_sort_4si_sse2(&v[0]); // Sort 0-1
+    bitonic_sort_4si_sse2(&v[2]); // Sort 2-3
+    merge_2l_2x4si_sse2(v); // Merge 0-1 and 2-3
+
+}
+
 #ifdef TEST
 
 // SSE2 test interfaces
