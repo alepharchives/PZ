@@ -33,12 +33,11 @@ typedef union {
 void pz_column_sort_4si_sse2(v4si *v);
 void pz_transpose_4si_sse2(v4si *v);
 void pz_register_sort_4si_sse2(v4si *v);
-void pz_bitonic_sort_4si_sse2(v4si *v);
-void pz_merge_2l_2x4si_sse2(v4si *v);
+void pz_bitonic_sort_4si_sse2(v4si *a, v4si *b);
+void pz_bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
+void pz_merge_2l_2x4si_sse2(v4si *s1, v4si *s2);
 void pz_merge_parallel_2x2l_2x8si_sse2(v4si *v);
-void pz_bitonic_sort_2x_4si_sse2(v4si *v);
 void pz_bitonic_merge_2x16si_sse2(v4si *v);
-void pz_register_sort_4x4si_full_sse2(v4si *v);
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 v4si_u * get_4x_v4si_random(int size, int32_t m) {
@@ -114,30 +113,6 @@ int test_register_sort_4() {
 
 }
 
-// Test sorting 16 signed integers
-int test_register_sort_full_16si() {
-    v4si_u   *v;
-    int32_t  *vi;
-    int      i;
-
-    v = get_4x_v4si_random(4, 15); // Get random 0-15
-
-    pz_register_sort_4x4si_full_sse2(&v[0].v); // Sort 0-3 full
-
-    // Check
-    for (i = 1, vi = (int32_t *) v; i < 15; i++) {
-        if (vi[i] > vi[i + 1]) {
-            printf("test_register_sort_full_16si: error at %d\n", i);
-            printf("  % 2d - % 2d\n", vi[i], vi[i + 1]);
-        }
-    }
-
-    _mm_free(v);
-
-    return 0;
-
-}
-
 // Test merge sort of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort() {
     int32_t  a[8], *pa;
@@ -147,7 +122,7 @@ int test_bitonic_sort() {
     v = get_4x_v4si_random(4, 15); // Get random 0-3
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
-    pz_bitonic_sort_4si_sse2(&v[0].v); // Sort first two together
+    pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first two together
 
     // Move to sequential array
     for (i = 0, pa = a; i < 2; i++)
@@ -178,8 +153,8 @@ int test_bitonic_sort_2x() {
     v = get_4x_v4si_random(4, 15); // Get random 0-15
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
-    pz_bitonic_sort_4si_sse2(&v[0].v); // Sort 0-1
-    pz_bitonic_sort_4si_sse2(&v[2].v); // Sort 2-3
+    pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
+    pz_bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort 2-3
 
     // Move to sequential array
     for (i = 0, pa = a, pb = b; i < 2; i++)
@@ -213,9 +188,9 @@ int test_merge_2_pairs() {
     v = get_4x_v4si_random(4, 15); // Get random 0-15
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
-    pz_bitonic_sort_4si_sse2(&v[0].v); // Sort 0-1
-    pz_bitonic_sort_4si_sse2(&v[2].v); // Sort 2-3
-    pz_merge_2l_2x4si_sse2((v4si *) v); // Merge 2 adjacent lists of 2 pairs
+    pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
+    pz_bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort 2-3
+    pz_merge_2l_2x4si_sse2((v4si *) &v[0], (v4si *) &v[2]); // Merge 2 seq
 
     // Move to sequential array
     for (i = 0, pa = a; i < 4; i++)
@@ -262,11 +237,11 @@ int test_merge_parallel_2list_2pairs() {
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_register_sort_4si_sse2(&v[4].v); // Sort 4-7
-    pz_bitonic_sort_4si_sse2(&v[0].v); // Sort 0-1
-    pz_bitonic_sort_4si_sse2(&v[2].v); // Sort 2-3
-    pz_bitonic_sort_2x_4si_sse2(&v[0].v);
-    pz_bitonic_sort_2x_4si_sse2(&v[4].v);
-    pz_merge_2l_2x4si_sse2((v4si *) v); // Merge 2 adjacent lists of 2 pairs
+    pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
+    pz_bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort 2-3
+    pz_bitonic_sort_2x_4si_sse2(&v[0].v, &v[1].v, &v[2].v, &v[3].v);
+    pz_bitonic_sort_2x_4si_sse2(&v[4].v, &v[5].v, &v[6].v, &v[7].v);
+    pz_merge_2l_2x4si_sse2((v4si *) &v[0], (v4si *) &v[2]); // Merge 0-3
     pz_merge_parallel_2x2l_2x8si_sse2((v4si *) v); // Merge v0-3 v4-7
 
     // Move to sequential array
@@ -310,12 +285,12 @@ int test_merge_16x16() {
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_register_sort_4si_sse2(&v[4].v); // Sort 4-7
-    pz_bitonic_sort_4si_sse2(&v[0].v); // Sort 0-1
-    pz_bitonic_sort_4si_sse2(&v[2].v); // Sort 2-3
-    pz_bitonic_sort_4si_sse2(&v[4].v); // Sort 4-5
-    pz_bitonic_sort_4si_sse2(&v[6].v); // Sort 6-7
-    pz_merge_2l_2x4si_sse2((v4si *) &v[0]); // Merge 2 adjacent lists of 2 pairs
-    pz_merge_2l_2x4si_sse2((v4si *) &v[4]); // Merge 2 adjacent lists of 2 pairs
+    pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
+    pz_bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort 2-3
+    pz_bitonic_sort_4si_sse2(&v[4].v, &v[5].v); // Sort 4-5
+    pz_bitonic_sort_4si_sse2(&v[6].v, &v[7].v); // Sort 6-7
+    pz_merge_2l_2x4si_sse2((v4si *) &v[0], (v4si *) &v[2]); // Merge 0-3
+    pz_merge_2l_2x4si_sse2((v4si *) &v[4], (v4si *) &v[6]); // Merge 4-7
 
     pz_bitonic_merge_2x16si_sse2(&v[0].v); // Test
 
@@ -367,7 +342,6 @@ int main(int argc, char *argv[]) {
 
     run_test(test_column_sort_4, "test_column_sort_4", t);
     run_test(test_register_sort_4, "test_register_sort_4", t);
-    run_test(test_register_sort_full_16si, "test_register_sort_full_16si", t);
     run_test(test_bitonic_sort, "test_bitonic_sort", t);
     run_test(test_bitonic_sort_2x, "test_bitonic_sort_2x", t);
     run_test(test_merge_2_pairs, "test_merge_2_pairs", t);
