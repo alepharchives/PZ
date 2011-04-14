@@ -22,7 +22,6 @@
 
 // A vector of 4 32bit signed integers (SSE2 128bit register)
 typedef __v4si v4si;
-typedef __v4sf v4sf;
 
 typedef union {
   int32_t s[4];
@@ -36,12 +35,12 @@ static void swap_sse2(v4si *a, v4si *b) {
 }
 
 static void reverse_v4_sse2(v4si *a) {
-    *a = __builtin_ia32_pshufd (*a, 0x1B); // abcd -> dcab
+    *a = (v4si) _mm_shuffle_epi32((__m128i) *a, 0x1B); // abcd -> dcab
 }
 
 // SSE2 lacks pmin/pmax for 32bit
 static void minmax_4si_sse2(v4si *a, v4si *b) {
-    v4si mask = __builtin_ia32_pcmpgtd128(*a, *b);
+    v4si mask = (v4si) _mm_cmpgt_epi32((__m128i) *a, (__m128i) *b);
     v4si t = (*a ^ *b) & mask;
     *a ^= t;
     *b ^= t;
@@ -61,14 +60,14 @@ static void column_sort_4si_sse2(v4si *v) {
 // Transpose 4 vectors of 4 32bit elements
 static void transpose_4si_sse2(v4si *v) {
 
-  __v4sf t0 = __builtin_ia32_unpcklps ((__v4sf) v[0], (__v4sf) v[1]);
-  __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) v[2], (__v4sf) v[3]);
-  __v4sf t2 = __builtin_ia32_unpckhps ((__v4sf) v[0], (__v4sf) v[1]);
-  __v4sf t3 = __builtin_ia32_unpckhps ((__v4sf) v[2], (__v4sf) v[3]);
-  v[0] = (v4si) __builtin_ia32_movlhps (t0, t1);
-  v[1] = (v4si) __builtin_ia32_movhlps (t1, t0);
-  v[2] = (v4si) __builtin_ia32_movlhps (t2, t3);
-  v[3] = (v4si) __builtin_ia32_movhlps (t3, t2);
+  __m128 t0 = _mm_unpacklo_ps ((__m128) v[0], (__m128) v[1]);
+  __m128 t1 = _mm_unpacklo_ps ((__m128) v[2], (__m128) v[3]);
+  __m128 t2 = _mm_unpackhi_ps ((__m128) v[0], (__m128) v[1]);
+  __m128 t3 = _mm_unpackhi_ps ((__m128) v[2], (__m128) v[3]);
+  v[0] = (v4si) _mm_movelh_ps (t0, t1);
+  v[1] = (v4si) _mm_movehl_ps (t1, t0);
+  v[2] = (v4si) _mm_movelh_ps (t2, t3);
+  v[3] = (v4si) _mm_movehl_ps (t3, t2);
 
 }
     
@@ -87,8 +86,8 @@ static void register_sort_4si_sse2(v4si *v) {
 // Level 1 exchange
 static void bitonic_l1_exchange_4si_sse2(v4si *a, v4si *b) {
 
-    __v4sf t0 = __builtin_ia32_movhlps ((__v4sf) *b,(__v4sf) *a);
-    __v4sf t1 = __builtin_ia32_movlhps ((__v4sf) *a,(__v4sf) *b);
+    __m128 t0 = _mm_movehl_ps ((__m128) *b,(__m128) *a);
+    __m128 t1 = _mm_movelh_ps ((__m128) *a,(__m128) *b);
     *b = (v4si) t0;
     *a = (v4si) t1;
 }
@@ -96,18 +95,18 @@ static void bitonic_l1_exchange_4si_sse2(v4si *a, v4si *b) {
 // Level 2 exchange
 static void bitonic_l2_exchange_4si_sse2(v4si *a, v4si *b) {
 
-    __v4sf t0 = __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
-    __v4sf t1 = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
-    *a = (v4si) __builtin_ia32_movlhps (t1, t0);
-    *b = (v4si) __builtin_ia32_movhlps (t0, t1);
+    __m128 t0 = _mm_unpackhi_ps ((__m128) *a, (__m128) *b);
+    __m128 t1 = _mm_unpacklo_ps ((__m128) *a, (__m128) *b);
+    *a = (v4si) _mm_movelh_ps (t1, t0);
+    *b = (v4si) _mm_movehl_ps (t0, t1);
 
 }
 
 // Level 3 exchange
 static void bitonic_l3_exchange_4si_sse2(v4si *a, v4si *b) {
 
-    __v4sf t = __builtin_ia32_unpcklps ((__v4sf) *a, (__v4sf) *b);
-    *b = (v4si) __builtin_ia32_unpckhps ((__v4sf) *a, (__v4sf) *b);
+    __m128 t = _mm_unpacklo_ps ((__m128) *a, (__m128) *b);
+    *b = (v4si) _mm_unpackhi_ps ((__m128) *a, (__m128) *b);
     *a = (v4si) t;
 
 }
