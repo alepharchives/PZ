@@ -39,26 +39,24 @@ void pz_merge_2l_2x4si_sse2(v4si *s1, v4si *s2);
 void pz_merge_parallel_2x2l_2x8si_sse2(v4si *v);
 void pz_bitonic_merge_2x16si_sse2(v4si *v);
 
+v4si_u *v, *a; // Buffers vector and aux
+
 // Make 4 vectors of 4 32bit signed integers and fill with random
-v4si_u * get_4x_v4si_random(int size, int32_t m) {
-    v4si_u  *v;
-    int      i, j;
+void vec_random(int size) {
+    int32_t  *p = (int32_t *) v;
+    uint32_t mask = size - 1; // Size should be power of 2
+    int      i;
 
-    v = _mm_malloc(sizeof (*v) * size, 16);
     for (i = 0; i < size; i++)
-        for (j = 0; j < 4; j++)
-            v[i].s[j] = random() & m; // Smaller number, only testing 4
-
-    return v;
+        *p = random() & mask;
 
 }
 
 // Test sorting columns of 4 vectors of 4 32bit signed integers
 int test_column_sort_4() {
-    v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(4, 3); // Get random 0-3
+    vec_random(32); // Add some random numbers
 
     pz_column_sort_4si_sse2(&v[0].v);
 
@@ -77,18 +75,15 @@ int test_column_sort_4() {
         }
     }
 
-    _mm_free(v);
-
     return 0;
 
 }
 
 // Test transposing 4 vectors of 4 32bit signed integers
 int test_register_sort_4() {
-    v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(4, 3); // Get random 0-3
+    vec_random(32); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
 
@@ -107,8 +102,6 @@ int test_register_sort_4() {
         }
     }
 
-    _mm_free(v);
-
     return 0;
 
 }
@@ -116,10 +109,9 @@ int test_register_sort_4() {
 // Test merge sort of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort() {
     int32_t  a[8], *pa;
-    v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(4, 15); // Get random 0-3
+    vec_random(32); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first two together
@@ -138,8 +130,6 @@ int test_bitonic_sort() {
             break;
         }
 
-    _mm_free(v);
-
     return 0;
 
 }
@@ -147,10 +137,9 @@ int test_bitonic_sort() {
 // Test parallel merge sort of 2 pairs of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort_2x() {
     int32_t  a[8], b[8], *pa, *pb;
-    v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(4, 15); // Get random 0-15
+    vec_random(32); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
@@ -173,8 +162,6 @@ int test_bitonic_sort_2x() {
             break;
         }
 
-    _mm_free(v);
-
     return 0;
 
 }
@@ -182,10 +169,9 @@ int test_bitonic_sort_2x() {
 // Test parallel merge sort of 2 pairs of 2 vectors of 4 32bit signed integers
 int test_merge_2_pairs() {
     int32_t  a[16], *pa;
-    v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(4, 15); // Get random 0-15
+    vec_random(32); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
@@ -212,12 +198,9 @@ int test_merge_2_pairs() {
                 printf("% 3d ", v[i].s[j]);
         printf("\n");
 
-        _mm_free(v);
         return -1;
 
     }
-
-    _mm_free(v);
 
     return 0;
 
@@ -230,10 +213,9 @@ int test_merge_2_pairs() {
 //
 int test_merge_parallel_2list_2pairs() {
     int32_t  a[32], *pa;
-    v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(8, 15); // Get 8 vectors with random 0-15
+    vec_random(64); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_register_sort_4si_sse2(&v[4].v); // Sort 4-7
@@ -264,12 +246,9 @@ int test_merge_parallel_2list_2pairs() {
                 printf("% 3d ", v[i].s[j]);
         printf("-\n");
 
-        _mm_free(v);
         return -1;
 
     }
-
-    _mm_free(v);
 
     return 0;
 
@@ -278,10 +257,9 @@ int test_merge_parallel_2list_2pairs() {
 // Test merge of 2 lists of 16 32bit signed integers (16x16si network)
 int test_merge_16x16() {
     int32_t  a[32], *pa;
-    v4si_u   *v;
     int      i, j;
 
-    v = get_4x_v4si_random(8, 31); // Get random 0-31
+    vec_random(64); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_register_sort_4si_sse2(&v[4].v); // Sort 4-7
@@ -314,12 +292,9 @@ int test_merge_16x16() {
                 printf("% 3d ", v[i].s[j]);
         printf("\n");
 
-        _mm_free(v);
         return -1;
 
     }
-
-    _mm_free(v);
 
     return 0;
 
@@ -338,6 +313,10 @@ int run_test(int (*f)(void), char *name, int reps) {
 int main(int argc, char *argv[]) {
     int t = 10000; // Repetitions of the tests
 
+    // Alloc buffers
+    v = _mm_malloc(sizeof (*v) * 32768, 16);
+    a = _mm_malloc(sizeof (*v) * 32768, 16);
+
     srandomdev(); // Init random pool from random device
 
     run_test(test_column_sort_4, "test_column_sort_4", t);
@@ -348,6 +327,9 @@ int main(int argc, char *argv[]) {
     run_test(test_merge_parallel_2list_2pairs,
             "test_merge_parallel_2list_2pairs", t);
     run_test(test_merge_16x16, "test_merge_16x16", t);
+
+    _mm_free(v);
+    _mm_free(a);
 
     return 0;
 
