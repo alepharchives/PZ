@@ -70,7 +70,7 @@ static void transpose_4si_sse2(v4si *v) {
   v[3] = (v4si) _mm_movehl_ps (t3, t2);
 
 }
-    
+
 // In-register sort of 4 vectors of 32bit signed integers
 static void register_sort_4si_sse2(v4si *v) {
 
@@ -240,6 +240,57 @@ static void bitonic_merge_2x16si_sse2(v4si *v) {
 
 }
 
+// Merge 2 lists of arbitrary size
+//     Merge sources x, y into z
+static void merge_2seq_sse2(v4si * restrict dst, v4si * restrict src1,
+        v4si * restrict src2, int len) {
+    v4si o1, o2; // Partial output sorted sequence of 8 (4+4)
+    v4si_u *s1 = (v4si_u *) src1; // Need to extract first element
+    v4si_u *s2 = (v4si_u *) src2; // Need to extract first element
+    int i1 = 0; // Position on sequence 1
+    int i2 = 0; // Position on sequence 2
+
+    o1 = src1[i1++]; // Take first 4 elements of sequence 1
+    o2 = src2[i2++]; // Take first 4 elements of sequence 2
+    bitonic_sort_4si_sse2(&o1, &o2);
+    *dst++ = o1; // Store first 4 elements in output array
+
+    // While there are remaining elements on both sequences merge lowest
+    for (i1 = 1, i2 = 1; i1 < len && i2 < len; ) {
+
+        // Pick lowest
+        if (s1[i1].s[0] < s2[i2].s[0])
+            o1 = s1[i1++].v;
+        else
+            o1 = s2[i2++].v;
+
+        bitonic_sort_4si_sse2(&o1, &o2);
+        *dst++ = o1; // Store in output array
+
+    }
+
+    // Merge remaining
+    if (i1 < len) {
+
+        do {
+            o1 = s1[i1++].v;
+            bitonic_sort_4si_sse2(&o1, &o2);
+            *dst++ = o1;
+        } while (i1 < len);
+
+    } else { // i2 < len
+
+        do {
+            o1 = s2[i2++].v;
+            bitonic_sort_4si_sse2(&o1, &o2);
+            *dst++ = o1;
+        } while (i2 < len);
+    }
+
+    *dst++ = o2; // Add last 4 elements
+
+}
+
 #ifdef TEST
 
 // SSE2 test interfaces
@@ -267,7 +318,8 @@ void pz_bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d) {
 void pz_bitonic_merge_2x16si_sse2(v4si *v) {
     bitonic_merge_2x16si_sse2(v);
 }
-void pz_merge_2seq_sse2(v4si *dst, v4si *src1, v4si *src2, int len) {
+void pz_merge_2seq_sse2(v4si * restrict dst, v4si * restrict src1,
+        v4si * restrict src2, int len) {
     merge_2seq_sse2(dst, src1, src2, len);
 }
 

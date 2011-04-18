@@ -38,17 +38,18 @@ void pz_bitonic_sort_2x_4si_sse2(v4si *a, v4si *b, v4si *c, v4si *d);
 void pz_merge_2l_2x4si_sse2(v4si *s1, v4si *s2);
 void pz_merge_parallel_2x2l_2x8si_sse2(v4si *v);
 void pz_bitonic_merge_2x16si_sse2(v4si *v);
+void pz_merge_2seq_sse2(v4si * restrict dst, v4si * restrict src1,
+        v4si * restrict src2, int len);
 
 v4si_u *v, *a; // Buffers vector and aux
 
 // Make 4 vectors of 4 32bit signed integers and fill with random
 void vec_random(int size) {
     int32_t  *p = (int32_t *) v;
-    uint32_t mask = size - 1; // Size should be power of 2
     int      i;
 
     for (i = 0; i < size; i++)
-        *p = random() & mask;
+        *p++ = random() % size;
 
 }
 
@@ -300,6 +301,46 @@ int test_merge_16x16() {
 
 }
 
+// Test merge of 2 lists of 16 32bit signed integers (16x16si network)
+int test_merge_2seq() {
+    int32_t  *pa;
+    int      i;
+
+    vec_random(32); // Add some random numbers
+
+    pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
+    pz_register_sort_4si_sse2(&v[4].v); // Sort 4-7
+    pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
+    pz_bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort 2-3
+    pz_bitonic_sort_4si_sse2(&v[4].v, &v[5].v); // Sort 4-5
+    pz_bitonic_sort_4si_sse2(&v[6].v, &v[7].v); // Sort 6-7
+    pz_merge_2l_2x4si_sse2((v4si *) &v[0], (v4si *) &v[2]); // Merge 0-3
+    pz_merge_2l_2x4si_sse2((v4si *) &v[4], (v4si *) &v[6]); // Merge 4-7
+
+    pz_merge_2seq_sse2(&a[0].v, &v[0].v, &v[4].v, 4);
+
+    // Check
+    for (i = 0, pa = (int32_t *) a; i < 31; i++)
+        if (pa[i] > pa[i + 1]) {
+            printf("test_merge_2_pairs: error at position %d: %d > %d\n",
+                    i, pa[i], pa[i + 1]);
+            break;
+        }
+
+    if (i != 31) {
+
+        for (i = 0, pa = (int32_t *) a; i < 32; i++)
+            printf("% 3d%c", pa[i], i == 15? '\n' : ' ');
+        printf("\n");
+        return -1;
+
+    }
+
+    return 0;
+
+}
+
+
 int run_test(int (*f)(void), char *name, int reps) {
     int i;
 
@@ -327,6 +368,7 @@ int main(int argc, char *argv[]) {
     run_test(test_merge_parallel_2list_2pairs,
             "test_merge_parallel_2list_2pairs", t);
     run_test(test_merge_16x16, "test_merge_16x16", t);
+    run_test(test_merge_2seq, "test_merge_2seq", t);
 
     _mm_free(v);
     _mm_free(a);
