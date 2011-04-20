@@ -40,6 +40,7 @@ void pz_merge_parallel_2x2l_2x8si_sse2(v4si *v);
 void pz_bitonic_merge_2x16si_sse2(v4si *v);
 void pz_merge_2seq_sse2(v4si * restrict dst, v4si * restrict src1,
         v4si * restrict src2, int len);
+void pz_register_seq_sort_4si_sse2(v4si *v, int len);
 
 v4si_u *v, *a; // Buffers vector and aux
 
@@ -340,6 +341,39 @@ int test_merge_2seq() {
 
 }
 
+// Test register sort of a 32K sequence
+int test_sort_registers_32k() {
+    int32_t  *pa;
+    int      i, j;
+
+    vec_random(32768); // Add some random numbers
+
+    pz_register_seq_sort_4si_sse2(&v[0].v, 32768);
+
+    // Check
+    for (i = 0, pa = (int32_t *) v; i < (32768 / 4); i++)
+        for (j = 0; j < 3; j++)
+            if (pa[i * 4 + j] > pa[i * 4 + j + 1]) {
+                printf("test_merge_2_pairs: error at position %d: %d > %d\n",
+                    i * 4 + j, pa[i * 4 + j], pa[i * 4 + j + 1]);
+            break;
+        }
+
+    if (i != (32768 / 4)) {
+
+#if 0
+        for (i = 0, pa = (int32_t *) a; i < 32; i++)
+            printf("% 3d%c", pa[i], i == 15? '\n' : ' ');
+        printf("\n");
+#endif
+        return -1;
+
+    }
+
+    return 0;
+
+}
+
 
 int run_test(int (*f)(void), char *name, int reps) {
     int i;
@@ -369,6 +403,7 @@ int main(int argc, char *argv[]) {
             "test_merge_parallel_2list_2pairs", t);
     run_test(test_merge_16x16, "test_merge_16x16", t);
     run_test(test_merge_2seq, "test_merge_2seq", t);
+    run_test(test_sort_registers_32k, "test_sort_registers_32k", 512);
 
     _mm_free(v);
     _mm_free(a);

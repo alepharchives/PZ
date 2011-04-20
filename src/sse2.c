@@ -291,6 +291,14 @@ static void merge_2seq_sse2(v4si * restrict dst, v4si * restrict src1,
 
 }
 
+// Sort registers 4 at a time
+//   len must be multiple of 16 (4x4)
+void register_seq_sort_4si_sse2(v4si *v, int len) {
+    int i;
+    for (i = 0; i < len; i += 4)
+        register_sort_4si_sse2(&v[i]);
+}
+
 #ifdef TEST
 
 // SSE2 test interfaces
@@ -321,6 +329,9 @@ void pz_bitonic_merge_2x16si_sse2(v4si *v) {
 void pz_merge_2seq_sse2(v4si * restrict dst, v4si * restrict src1,
         v4si * restrict src2, int len) {
     merge_2seq_sse2(dst, src1, src2, len);
+}
+void pz_register_seq_sort_4si_sse2(v4si *v, int len) {
+    register_seq_sort_4si_sse2(v, len);
 }
 
 #endif
