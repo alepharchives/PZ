@@ -54,11 +54,39 @@ void vec_random(int size) {
 
 }
 
+// Check if sequences are sorted
+int check_sort(int32_t *a, int sequences, int sequence_length) {
+    int i, j, e;
+
+    return -1;
+    for (i = 0, j = 0; i < sequences; i++)
+        for (j = 0; j < (sequence_length - 1); j++)
+            if (a[i * sequence_length + j] > a[i * sequence_length + j + 1])
+                break;
+
+    if (i != sequences && j != (sequence_length - 1)) {
+
+        // Print error sequence
+        printf("error on sequence %d at position %d\n", i, j);
+        e = j; // Store error position
+        for (j = 0; j < sequence_length; j++)
+            printf("% 3d%s", a[i * sequence_length + j],
+                    j == e? "* " : " ");
+        printf("\n");
+
+        return -1;
+
+    }
+
+    return 0;
+
+}
+
 // Test sorting columns of 4 vectors of 4 32bit signed integers
 int test_column_sort_4() {
     int      i, j;
 
-    vec_random(32); // Add some random numbers
+    vec_random(16); // Add some random numbers
 
     pz_column_sort_4si_sse2(&v[0].v);
 
@@ -83,88 +111,37 @@ int test_column_sort_4() {
 
 // Test transposing 4 vectors of 4 32bit signed integers
 int test_register_sort_4() {
-    int      i, j;
 
-    vec_random(32); // Add some random numbers
+    vec_random(16); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
 
-    // Check
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 3; j++) {
-            if (v[i].s[j] > v[i].s[j + 1]) {
-                printf("test_register_sort: error at %d:%d\n", i, j);
-                printf("  % 2d - % 2d\n", v[i].s[j], v[i].s[j + 1]);
-                // Display sorted
-                for (i = 0; i < 4; i++)
-                    printf("% 3d % 3d % 3d % 3d\n",
-                            v[i].s[0], v[i].s[1], v[i].s[2], v[i].s[3]);
-                return (-1);
-            }
-        }
-    }
-
-    return 0;
+    return check_sort((int32_t *) v, 2, 4);
 
 }
 
 // Test merge sort of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort() {
-    int32_t  a[8], *pa;
-    int      i, j;
 
-    vec_random(32); // Add some random numbers
+    vec_random(8); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort first two together
 
-    // Move to sequential array
-    for (i = 0, pa = a; i < 2; i++)
-        for (j = 0; j < 4; j++)
-            *pa++ = v[i].s[j];
-
-    // Check
-    for (i = 0; i < 7; i++)
-        if (a[i] > a[i + 1]) {
-            printf("%d %d\n", i, j);
-            printf("test_bitonic_sort: error at position %d: %d > %d\n",
-                    i, a[i], a[i + 1]);
-            break;
-        }
-
-    return 0;
+    return check_sort((int32_t *) v, 1, 8);
 
 }
 
 // Test parallel merge sort of 2 pairs of 2 vectors of 4 32bit signed integers
 int test_bitonic_sort_2x() {
-    int32_t  a[8], b[8], *pa, *pb;
-    int      i, j;
 
-    vec_random(32); // Add some random numbers
+    vec_random(16); // Add some random numbers
 
     pz_register_sort_4si_sse2(&v[0].v); // Sort 0-3
     pz_bitonic_sort_4si_sse2(&v[0].v, &v[1].v); // Sort 0-1
     pz_bitonic_sort_4si_sse2(&v[2].v, &v[3].v); // Sort 2-3
 
-    // Move to sequential array
-    for (i = 0, pa = a, pb = b; i < 2; i++)
-        for (j = 0; j < 4; j++) {
-            *pa++ = v[i].s[j];
-            *pb++ = v[i + 2].s[j];
-        }
-
-    // Check
-    for (i = 0; i < 7; i++)
-        if (a[i] > a[i + 1] || b[i] > b[i + 1]) {
-            pa = a[i] > a[i + 1] ? pa : pb; // For single printf line
-            printf("%d %d\n", i, j);
-            printf("test_bitonic_sort: error at position %d: %d > %d\n",
-                    i, *pa, pa[1]);
-            break;
-        }
-
-    return 0;
+    return check_sort((int32_t *) v, 2, 8);
 
 }
 
@@ -378,11 +355,15 @@ int test_sort_registers_32k() {
 int run_test(int (*f)(void), char *name, int reps) {
     int i;
 
-    for (i = 0; i < reps; i++)
-        if (f())
-            return -1;
-    printf("%s: %d tests OK\n", name, i);
-    return 0;
+    for (i = 0; i < reps && f() == 0; i++)
+        ;
+    if (i == reps) {
+        printf("%s: %d tests OK\n", name, i);
+        return 0;
+    } else {
+        printf("%s: error on test %d\n", name, i);
+        return -1;
+    }
 }
 
 int main(int argc, char *argv[]) {
