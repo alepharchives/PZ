@@ -64,7 +64,7 @@ SECTION .text
 
 ;       0 1 2 3
 ;       4 5 6 7
-; L2P:  0 4 2 6   XXX this or B/A?
+; L2P:  0 4 2 6
 ; H2P:  1 5 3 7
 %macro BITONICL2D 4 ; %1 reg1, %2 reg2, %3 tmp1 %4 tmp2
     mova      m%3, m%1 ; save copy reg1
@@ -104,24 +104,35 @@ SECTION .text
     BITONICL3D  %1, %2, %3
 %endmacro
 
-; void cri(int n, int32_t *elem)
-cglobal cri, 2,2 ; n, src
+; void cri(int n, int32_t *elem, int32_t *aux)
+cglobal cri, 3,3,16 ; n, src
 INIT_XMM
-    shr  r0, 4   ; Consume 2x4 elements at a time
+    shr  r0, 5   ; Consume 4x4 elements at a time
 .bitonic_loop:
     ; Load 4 xmm regs
     mova      m0, [r1+ 0]       ; load first
     mova      m1, [r1+16]       ; load first
     mova      m2, [r1+32]       ; load first
     mova      m3, [r1+48]       ; load first
-    ; Column sort to obtain 4 sorted registers
-    REGSORT 0, 1, 2, 3, 4, 5    ; 4 regs 2 aux
+    ;; Column sort to obtain 4 sorted registers
+    REGSORT 0, 1, 2, 3, 14, 15    ; 4 regs 2 aux
     ; Merge sort first pair of registers
     pshufd    m1, m1, 0x1b      ; reverse second
-    BITONIC_MERGED 0, 1, 4, 5   ; 2 regs 2 aux
+    BITONIC_MERGED 0, 1, 14, 15   ; 2 regs 2 aux
     ; Merge sort second pair of registers
-    pshufd    m3, m3, 0x1b     ; reverse fourth
-    BITONIC_MERGED 2, 3, 4, 5   ; 2 regs 2 aux
+    pshufd    m3, m3, 0x1b      ; reverse fourth
+    BITONIC_MERGED 2, 3, 14, 15   ; 2 regs 2 aux
+    ; Merge 0-2, 2-min(1,3), 
+    pshufd    m2, m2, 0x1b      ; reverse fourth
+    ;
+    ; Merge pairs 0-1 and 2-3
+    ;
+    BITONIC_MERGED 0, 2, 14, 15   ; 2 regs 2 aux
+    MINMAXD    1, 3, 14, 15        ; lowest to merge with m2
+    pshufd    m2, m2, 0x1b      ; reverse fourth
+    BITONIC_MERGED 1, 2, 14, 15   ; 2 regs 2 aux
+    pshufd    m3, m3, 0x1b      ; reverse fourth
+    BITONIC_MERGED 2, 3, 14, 15   ; 2 regs 2 aux
     mova  [r1+ 0], m0
     mova  [r1+16], m1
     mova  [r1+32], m2
@@ -138,7 +149,6 @@ cglobal sort_%1, 3,4 ; use 1 more reg and less than 6 mmx/sse
     ;shr    r0d, 9   ; divide by 2*8 elems
     shr    r0d, 4    ; // Consume 4x4 elements at a time (n/16*4B)
 .regsort_loop:
-    ;;prefetchnta [r1+256]
     add    r1, 64 ; move forward 16 elements (4*mmsize)
     dec    r0d    ; 4 regs done  (sets flag if 0)
     jg     .regsort_loop

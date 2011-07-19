@@ -6,7 +6,7 @@
 #include "mm_malloc.h"
 
 void x264_sort_ssse3(int32_t n, int32_t *dst, int32_t *aux);
-void x264_cri(int n, int32_t *data);
+void x264_cri(int n, int32_t *data, int32_t *aux);
 
 typedef void (sort_f)(int32_t, int32_t *, int32_t *);
 
@@ -89,40 +89,24 @@ void sub(int n, sort_f f, char *name) {
     }
 
 #ifdef DEBUG
-    for (i = 0; i < 32; i++)
-        printf("%i%c", d[i], (i+1) % 4? ' ' : '\n');
-#endif
-
 #define TESTME 32
     for (i = 0; i < TESTME; i++)
-        d[i] = random() % 10;
+        d[i] = i % 16; //random() % 10;
     for (i = 0; i < TESTME; i++)
-        printf("%i%c", d[i], (i+1) % 4 ? ' ' : '\n');
+        printf("%X%c", d[i], (i+1) % 4 ? ' ' : '\n');
     printf("\n");
     x264_cri(TESTME, d);
     for (i = 0; i < TESTME; i++)
-        printf("%i%c", d[i], (i+1) % 4 ? ' ' : '\n');
+        printf("%X%c", d[i], (i+1) % 4 ? ' ' : '\n');
+#endif
+
     _mm_free(d);
     _mm_free(aux);
 }
 
-void b1(void) {
-    int32_t *d;
-    int i;
-
-    d = _mm_malloc(32, 16);
-    for (i = 0; i < 8; i++)
-        d[i] = i;
-
-    x264_cri(32, d);
-    for (i = 0; i < 8; i++)
-        printf("%i%c", d[i], (i+1) % 4 ? ' ' : '\n');
-}
-
 int main(int argc, char *argv[]) {
 
-    b1();
-    sub((1<<15), x264_sort_ssse3, "ssse3");
+    sub((1<<15), x264_cri, "ssse3");
 
     return (0);
 }
