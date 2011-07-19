@@ -109,13 +109,17 @@ cglobal cri, 2,2 ; n, src
 INIT_XMM
     shr  r0, 4   ; Consume 2x4 elements at a time
 .bitonic_loop:
+    ; Load 4 xmm regs
     mova      m0, [r1+ 0]       ; load first
     mova      m1, [r1+16]       ; load first
     mova      m2, [r1+32]       ; load first
     mova      m3, [r1+48]       ; load first
+    ; Column sort to obtain 4 sorted registers
     REGSORT 0, 1, 2, 3, 4, 5    ; 4 regs 2 aux
+    ; Merge sort first pair of registers
     pshufd    m1, m1, 0x1b      ; reverse second
     BITONIC_MERGED 0, 1, 4, 5   ; 2 regs 2 aux
+    ; Merge sort second pair of registers
     pshufd    m3, m3, 0x1b     ; reverse fourth
     BITONIC_MERGED 2, 3, 4, 5   ; 2 regs 2 aux
     mova  [r1+ 0], m0
