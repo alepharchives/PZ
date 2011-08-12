@@ -1,3 +1,17 @@
+;
+; XXX instead of xor exchange for minmax (from Agner Opt 13.1)
+; z = max(x,y)
+; mov    r1,  [y]
+; cmpgt  r1,  [x] ;  r1 = mask max (x, y)
+; mov    r0,  [x] ;  r0 = x
+; andps  r0,  r1  ;  x AND mask
+; andnps r0,  [y] ;  y AND NOT mask (destroys mask r1)
+; orps   r0,  r1  ;  (x AND mask) OR (y AND NOT mask)
+; mov    [z], r0  ;  store result
+;
+;
+;
+
 ;;  Copyright (C) 2011  Alejo Sanchez www.ologan.com
 ;;
 ;;  This program is free software: you can redistribute it and/or modify
