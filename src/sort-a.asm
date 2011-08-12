@@ -96,12 +96,30 @@ SECTION .text
 ;%endmacro
 
 %macro BITONIC_MERGED 4 ; takes 2 add
+    pshufd      %2, %2, 0x1b      ; reverse second
     MINMAXD     %1, %2, %3, %4
     BITONICL1D  %1, %2, %3
     MINMAXD     %1, %2, %3, %4
     BITONICL2D  %1, %2, %3, %4
     MINMAXD     %1, %2, %3, %4
     BITONICL3D  %1, %2, %3
+%endmacro
+
+%macro BITONIC_MERGE_P4_D 6 ; merge %1/%2 and %3/%4, aux %5 %6
+    pshufd      %2, %2, 0x1b      ; reverse second
+    MINMAXD     %1, %2, %5, %6
+    BITONICL1D  %1, %2, %5
+    MINMAXD     %1, %2, %5, %6
+    BITONICL2D  %1, %2, %5, %6
+    MINMAXD     %1, %2, %5, %6
+    BITONICL3D  %1, %2, %5
+      pshufd      %4, %4, 0x1b      ; reverse second
+      MINMAXD     %3, %4, %5, %6
+      BITONICL1D  %3, %4, %5
+      MINMAXD     %3, %4, %5, %6
+      BITONICL2D  %3, %4, %5, %6
+      MINMAXD     %3, %4, %5, %6
+      BITONICL3D  %3, %4, %5
 %endmacro
 
 ; void cri(int n, int32_t *elem, int32_t *aux)
@@ -117,21 +135,16 @@ INIT_XMM
     ;; Column sort to obtain 4 sorted registers
     REGSORT 0, 1, 2, 3, 14, 15    ; 4 regs 2 aux
     ; Merge sort first pair of registers
-    pshufd    m1, m1, 0x1b      ; reverse second
     BITONIC_MERGED 0, 1, 14, 15   ; 2 regs 2 aux
     ; Merge sort second pair of registers
-    pshufd    m3, m3, 0x1b      ; reverse fourth
     BITONIC_MERGED 2, 3, 14, 15   ; 2 regs 2 aux
     ; Merge 0-2, 2-min(1,3), 
-    pshufd    m2, m2, 0x1b      ; reverse fourth
     ;
     ; Merge pairs 0-1 and 2-3
     ;
     BITONIC_MERGED 0, 2, 14, 15   ; 2 regs 2 aux
     MINMAXD    1, 3, 14, 15        ; lowest to merge with m2
-    pshufd    m2, m2, 0x1b      ; reverse fourth
     BITONIC_MERGED 1, 2, 14, 15   ; 2 regs 2 aux
-    pshufd    m3, m3, 0x1b      ; reverse fourth
     BITONIC_MERGED 2, 3, 14, 15   ; 2 regs 2 aux
     mova  [r1+ 0], m0
     mova  [r1+16], m1
